@@ -1,0 +1,252 @@
+/* filepath: c:\_repos\finops-toolkit-1\src\Finelle\frontend\src\components\ChatBubble.css */
+/* === jzy Chat Bubble Styling === */
+
+.jzy-chat-bubble {
+    padding: 12px;
+    margin: 8px;
+    border-radius: 12px;
+    background-color: #f5f5f5;
+    font-family: "Segoe UI", sans-serif;
+    overflow-wrap: break-word;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+/* Roles */
+.jzy-user {
+    background-color: #e0f7fa;
+    align-self: flex-end;
+}
+
+.jzy-agent {
+    background-color: #f5f5f5;
+    align-self: flex-start;
+}
+
+.jzy-system {
+    font-style: italic;
+    font-size: 0.95em;
+    background-color: #fff8e1;
+    padding: 12px;
+    margin: 8px;
+    border-radius: 12px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.jzy-system {
+    background-color: #fff8e1;
+    color: #333;
+}
+
+/* Meta */
+.jzy-chat-meta {
+    font-size: 0.85em;
+    font-weight: bold;
+    margin-bottom: 4px;
+    color: #555;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.hljs {
+    background: #282c34;
+    color: #ffffff;
+    padding: 12px;
+    border-radius: 6px;
+}
+
+.jzy-chat-role {
+    display: inline-block;
+}
+
+.jzy-chat-time {
+    font-size: 0.8em;
+    color: #888;
+}
+
+/* Content */
+.jzy-chat-content {
+    font-size: 0.905em;
+    line-height: 1.4;
+    display: block;
+    position: relative;
+    z-index: 1;
+    pointer-events: auto;
+}
+
+.jzy-chat-content * {
+    pointer-events: auto;
+}
+
+.jzy-chat-content h1,
+.jzy-chat-content h2,
+.jzy-chat-content h3,
+.jzy-chat-content p,
+.jzy-chat-content li {
+    margin-top: 0.08rem;
+    margin-bottom: 0.08rem;
+}
+
+.jzy-chat-content strong {
+    font-weight: 500;
+    margin-bottom: 0.10rem;
+}
+
+/* Markdown Table */
+.jzy-chat-content table {
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-top: 8px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Reference link styling within chat bubbles */
+.jzy-chat-bubble .jzy-reference-link {
+    margin: 2px 0;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 4px;
+    background-color: rgba(0, 120, 212, 0.1);
+    color: #0078d4;
+    font-weight: 600;
+    text-decoration: none;
+    padding: 2px 6px;
+    transition: all 0.2s ease;
+}
+
+.jzy-chat-bubble .jzy-reference-link:hover {
+    background-color: rgba(0, 120, 212, 0.2);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.jzy-chat-bubble .jzy-educational-link {
+    background-color: rgba(0, 120, 212, 0.15);
+    border-left: 2px solid #0078d4;
+}
+
+.jzy-chat-bubble .jzy-reference-icon {
+    margin-right: 4px;
+    font-size: 0.9em;
+}
+
+/* Tag styling */
+.jzy-tag-user,
+.jzy-tag-agent,
+.jzy-tag-system,
+.jzy-tag-assistant {
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 0.85em;
+}
+
+.jzy-tag-user {
+    background-color: #64b5f6;
+    color: white;
+}
+
+.jzy-tag-agent,
+.jzy-tag-assistant {
+    background-color: #b581c7;
+    color: white;
+}
+
+.jzy-tag-system {
+    background-color: #ffb74d;
+    color: white;
+}
+
+/* Markdown Table */
+.jzy-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1em 0;
+    font-size: 0.95em;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.jzy-table th {
+    background-color: #f0f0f0;
+    color: #333;
+    font-weight: 500;
+    text-align: left;
+    padding: 10px 15px;
+}
+
+.jzy-table td {
+    padding: 8px 15px;
+    border-top: 1px solid #eee;
+    vertical-align: top;
+}
+
+.jzy-table tr:nth-child(even) {
+    background-color: #f8f8f8;
+}
+
+.jzy-table tr:hover {
+    background-color: #f0f7ff;
+}
+
+/* Code styling */
+.jzy-code-block {
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    padding: 12px;
+    border-radius: 8px;
+    margin: 12px 0;
+    position: relative;
+    font-family: "Consolas", "Monaco", monospace;
+    font-size: 0.9em;
+    overflow-x: auto;
+}
+
+/* Custom Tag Styling */
+.jzy-markdown a.tag {
+    background-color: #e4f3ff;
+    color: #007acc;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    margin: 0 4px;
+    text-decoration: none;
+    transition: background-color 0.3s ease;
+}
+
+.jzy-markdown a.tag:hover {
+    background-color: #d0e8fb;
+}
+
+/* Blockquote Styling */
+.jzy-markdown blockquote {
+    margin: 8px 0;
+    padding: 8px 12px;
+    border-left: 3px solid #90caf9;
+    background-color: rgba(144, 202, 249, 0.1);
+    font-style: italic;
+}
+
+/* Citation List */
+.jzy-citation-list {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid #eee;
+    font-size: 0.85em;
+    color: #777;
+}
+
+.jzy-citation-item {
+    margin: 4px 0;
+}
+
+.jzy-citation-link {
+    color: #0078d4;
+    text-decoration: none;
+}
+
+.jzy-citation-link:hover {
+    text-decoration: underline;
+}

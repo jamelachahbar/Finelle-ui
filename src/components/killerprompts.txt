@@ -1,0 +1,54 @@
+Overall Savings Plan Commitment Prompt
+1. Analyze my Azure cost and usage data for the past 12 months. Calculate the average $/hour eligible for a savings plan across all subscriptions, including only compute resources (Virtual Machines, Virtual Machine Scale Sets, App Service Environments) that are not already covered by reservations. Exclude any costs already covered by reservations. Present the result as a single $/hour value I can confidently use for a shared-scope savings plan commitment.
+
+2. Per-Subscription Savings Plan Commitment Prompt
+Analyze my Azure cost and usage data for the past 12 months. For each subscription, calculate the average $/hour eligible for a savings plan, including only compute resources (Virtual Machines, Virtual Machine Scale Sets, App Service Environments) that are not already covered by reservations. Exclude any costs already covered by reservations. Present the results in a table with columns: Subscription, Eligible Compute $/hr (avg, not covered by reservations).
+
+
+4. Forecast the next 30 days of EffectiveCost using KQL's series_decompose_forecast, with the training window set to the last 3 months of daily cost data. Show the percentage increase or decrease. Use pretty icons
+
+Show me a table with actuals vs forecast and percent difference for EffectiveCost, using KQL's series_decompose_forecast over the last 3 months of daily data, and include only rows where both actual and forecast are present. Please ensure the query handles nulls and array expansion correctly. Show the percentage increase or decrease. Use pretty icons
+
+Show me a table with actuals vs forecast and percent difference for EffectiveCost, using KQL's series_decompose_forecast over the last 3 months of daily data, and include only rows where both actual and forecast are present. Please ensure the query handles nulls and array expansion correctly.
+
+show me SKUs with commitment discounts
+
+show me skus that have negotiated discount
+
+
+
+
+
+5. Forecasts the next 30 days of EffectiveCost using KQL's series_decompose_forecast, with the training window set to 6 months of daily data, and apply seasonality of 7
+
+
+let trainingWindow = 180d;
+let forecastHorizon = 30d;
+let costs = Costs_v1_0
+| where ChargePeriodStart >= ago(trainingWindow)
+| summarize EffectiveCost = sum(EffectiveCost) by ChargePeriodStart = startofday(ChargePeriodStart)
+| order by ChargePeriodStart asc;
+let startDate = toscalar(costs | summarize min(ChargePeriodStart));
+let endDate = toscalar(costs | summarize max(ChargePeriodStart));
+costs
+| make-series EffectiveCost=sum(EffectiveCost) on ChargePeriodStart from startDate to endDate step 1d
+| extend Forecast = series_decompose_forecast(EffectiveCost, 30, seasonality=7)
+
+
+let startDate = startofday(datetime(2024-12-05));
+let endDate = startofday(datetime(2025-06-04));
+let forecastHorizon = 30d;
+Costs_v1_0
+| where ChargePeriodStart >= startDate and ChargePeriodStart <= endDate
+| make-series EffectiveCost = sum(EffectiveCost) on ChargePeriodStart from startDate to endDate + forecastHorizon step 1d
+| extend Forecast = series_decompose_forecast(EffectiveCost, 30, 7)
+| project ChargePeriodStart, Historical = EffectiveCost, Forecasted = Forecast.forecast, LowerBound = Forecast.lower, UpperBound = Forecast.upper
+
+This query:
+Forecasts the next 30 days of EffectiveCost using KQL's series_decompose_forecast, with 6 months of daily EffectiveCost data as the training window. Apply a 30-day forecast horizon. Set weekly seasonality (seasonality=7).
+Return both historical and forecasted values.
+
+let forecastDays = 30; let costs = Costs_v1_0 | where ChargePeriodStart >= startofmonth(ago(180d)) // 6 months | summarize EffectiveCost = sum(EffectiveCost) by ChargePeriodStart = startofday(ChargePeriodStart) | order by ChargePeriodStart asc; let startOfPeriod = toscalar(costs | summarize min(ChargePeriodStart)); let endOfPeriod = toscalar(costs | summarize max(ChargePeriodStart)); costs | make-series EffectiveCost_double = todouble(sum(EffectiveCost)) on ChargePeriodStart from startOfPeriod to endOfPeriod + forecastDays*1d step 1d | extend Forecast = series_decompose_forecast(EffectiveCost_double, forecastDays, seasonality=7) | project ChargePeriodStart, EffectiveCost = EffectiveCost_double, Forecast | mv-expand ChargePeriodStart to typeof(datetime), EffectiveCost to typeof(double), Forecast to typeof(double) | extend IsForecast = ChargePeriodStart > endOfPeriod | project ChargePeriodStart, EffectiveCost, Forecast, IsForecast | order by ChargePeriodStart asc
+
+
+Are there any outliers in my cost data when considering both network and region?
