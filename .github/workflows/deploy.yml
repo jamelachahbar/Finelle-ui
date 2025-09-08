@@ -33,7 +33,6 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '22.x'
-        cache: 'none'   # <— important: avoid stale npm cache
 
     - name: Prep clean npm cache + retries
       run: |
