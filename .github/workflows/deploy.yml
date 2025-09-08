@@ -5,7 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-    types: [closed]
+    types: [ closed ]
   workflow_dispatch:
 
 env:
@@ -22,152 +22,147 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    
+    # Only run on merged PRs (still runs on push and workflow_dispatch)
+    if: github.event_name != 'pull_request' || github.event.pull_request.merged == true
+
     steps:
-    # Checkout the repository
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
- # Setup Node.js (no cache restore)
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '22.x'
+      # Node (no caching input => no cache restore)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
 
-    - name: Prep clean npm cache + retries
-      run: |
-        npm config set cache $(mktemp -d)
-        npm config set fetch-retries 5
-        npm config set fetch-retry-maxtimeout 600000
-        npm config set registry https://registry.npmjs.org/
-        node -v
-        npm -v
-        npm cache verify || true
+      - name: Prep clean npm cache + retries
+        run: |
+          npm config set cache "$(mktemp -d)"
+          npm config set fetch-retries 5
+          npm config set fetch-retry-maxtimeout 600000
+          npm config set registry https://registry.npmjs.org/
+          node -v
+          npm -v
+          npm cache verify || true
 
-    - name: Install dependencies
-      run: npm ci --no-audit --no-fund
+      - name: Install dependencies
+        run: npm ci --prefer-online --no-audit --no-fund
 
-    # Install dependencies
-    - name: Install dependencies
-      run: npm ci
+      - name: Run tests
+        run: npm test -- --coverage --watchAll=false
 
-    # Run tests
-    - name: Run tests
-      run: npm test -- --coverage --watchAll=false
+      - name: Build application
+        run: npm run build
 
-    # Build the application
-    - name: Build application
-      run: npm run build
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-    # Azure Login using OIDC
-    - name: Azure Login
-      uses: azure/login@v2
-      with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Check for infrastructure changes
+        id: infra-changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            infra:
+              - 'infrastructure/**'
 
-    # Deploy infrastructure if infrastructure files changed
-    - name: Check for infrastructure changes
-      id: infra-changes
-      uses: dorny/paths-filter@v3
-      with:
-        filters: |
-          infra:
-            - 'infrastructure/**'
+      - name: Deploy infrastructure
+        if: steps.infra-changes.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
+        run: |
+          echo "Deploying infrastructure..."
+          az deployment sub create \
+            --location "East US 2" \
+            --template-file infrastructure/main.bicep \
+            --parameters infrastructure/environments/main.parameters.json \
+            --name "finelle-ui-infra-$(date +%Y%m%d-%H%M%S)" \
+            --only-show-errors
 
-    - name: Deploy infrastructure
-      if: steps.infra-changes.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
-      run: |
-        echo "Deploying infrastructure..."
-        az deployment sub create \
-          --location "East US 2" \
-          --template-file infrastructure/main.bicep \
-          --parameters infrastructure/environments/main.parameters.json \
-          --name "finelle-ui-infra-$(date +%Y%m%d-%H%M%S)"
+      - name: Get deployment outputs
+        id: get-outputs
+        run: |
+          DEPLOYMENT_NAME=$(az deployment sub list --query "[?contains(name, 'finelle-ui-infra')].name | sort(@) | [-1]" -o tsv)
+          ACR_LOGIN_SERVER=$(az deployment sub show --name "$DEPLOYMENT_NAME" --query "properties.outputs.containerRegistryLoginServer.value" -o tsv)
+          RESOURCE_GROUP_NAME=$(az deployment sub show --name "$DEPLOYMENT_NAME" --query "properties.outputs.resourceGroupName.value" -o tsv)
+          CONTAINER_APP_NAME=$(az deployment sub show --name "$DEPLOYMENT_NAME" --query "properties.outputs.containerAppName.value" -o tsv)
 
-    # Get ACR login server from deployment outputs
-    - name: Get deployment outputs
-      id: get-outputs
-      run: |
-        DEPLOYMENT_NAME=$(az deployment sub list --query "[?contains(name, 'finelle-ui-infra')].name | sort(@) | [-1]" -o tsv)
-        ACR_LOGIN_SERVER=$(az deployment sub show --name $DEPLOYMENT_NAME --query "properties.outputs.containerRegistryLoginServer.value" -o tsv)
-        RESOURCE_GROUP_NAME=$(az deployment sub show --name $DEPLOYMENT_NAME --query "properties.outputs.resourceGroupName.value" -o tsv)
-        CONTAINER_APP_NAME=$(az deployment sub show --name $DEPLOYMENT_NAME --query "properties.outputs.containerAppName.value" -o tsv)
-        
-        echo "acr-login-server=$ACR_LOGIN_SERVER" >> $GITHUB_OUTPUT
-        echo "resource-group=$RESOURCE_GROUP_NAME" >> $GITHUB_OUTPUT
-        echo "container-app-name=$CONTAINER_APP_NAME" >> $GITHUB_OUTPUT
+          echo "acr-login-server=$ACR_LOGIN_SERVER" >> $GITHUB_OUTPUT
+          echo "resource-group=$RESOURCE_GROUP_NAME" >> $GITHUB_OUTPUT
+          echo "container-app-name=$CONTAINER_APP_NAME" >> $GITHUB_OUTPUT
 
-    # Build and push Docker image to ACR
-    - name: Build and push Docker image
-      run: |
-        # Login to ACR
-        az acr login --name ${{ steps.get-outputs.outputs.acr-login-server }}
-        
-        # Build and tag the image
-        docker build -t ${{ steps.get-outputs.outputs.acr-login-server }}/finelle-ui:${{ github.sha }} .
-        docker tag ${{ steps.get-outputs.outputs.acr-login-server }}/finelle-ui:${{ github.sha }} ${{ steps.get-outputs.outputs.acr-login-server }}/finelle-ui:latest
-        
-        # Push the image
-        docker push ${{ steps.get-outputs.outputs.acr-login-server }}/finelle-ui:${{ github.sha }}
-        docker push ${{ steps.get-outputs.outputs.acr-login-server }}/finelle-ui:latest
+      - name: Build and push Docker image
+        run: |
+          REGISTRY_LOGIN_SERVER="${{ steps.get-outputs.outputs.acr-login-server }}"   # e.g., myregistry.azurecr.io
+          REGISTRY_NAME="$(echo "$REGISTRY_LOGIN_SERVER" | cut -d. -f1)"             # e.g., myregistry
 
-    # Update Container App with new image
-    - name: Update Container App
-      run: |
-        echo "Updating Container App with new image..."
-        az containerapp update \
-          --name ${{ steps.get-outputs.outputs.container-app-name }} \
-          --resource-group ${{ steps.get-outputs.outputs.resource-group }} \
-          --image ${{ steps.get-outputs.outputs.acr-login-server }}/finelle-ui:${{ github.sha }}
+          # Login to ACR (expects registry NAME)
+          az acr login --name "$REGISTRY_NAME"
 
-    # Set up role assignment for Container App to pull from ACR
-    - name: Set up ACR pull permissions
-      run: |
-        echo "Setting up ACR pull permissions for Container App..."
-        PRINCIPAL_ID=$(az containerapp show \
-          --name ${{ steps.get-outputs.outputs.container-app-name }} \
-          --resource-group ${{ steps.get-outputs.outputs.resource-group }} \
-          --query "identity.principalId" -o tsv)
-        
-        ACR_RESOURCE_ID=$(az acr show \
-          --name $(echo ${{ steps.get-outputs.outputs.acr-login-server }} | cut -d. -f1) \
-          --resource-group ${{ steps.get-outputs.outputs.resource-group }} \
-          --query "id" -o tsv)
-        
-        # Check if role assignment already exists, if not create it
-        EXISTING_ASSIGNMENT=$(az role assignment list \
-          --assignee $PRINCIPAL_ID \
-          --scope $ACR_RESOURCE_ID \
-          --role "AcrPull" \
-          --query "length(@)" -o tsv)
-        
-        if [ "$EXISTING_ASSIGNMENT" = "0" ]; then
-          az role assignment create \
-            --assignee $PRINCIPAL_ID \
+          # Build and tag the image
+          docker build -t "$REGISTRY_LOGIN_SERVER/finelle-ui:${{ github.sha }}" .
+          docker tag   "$REGISTRY_LOGIN_SERVER/finelle-ui:${{ github.sha }}" "$REGISTRY_LOGIN_SERVER/finelle-ui:latest"
+
+          # Push the image
+          docker push  "$REGISTRY_LOGIN_SERVER/finelle-ui:${{ github.sha }}"
+          docker push  "$REGISTRY_LOGIN_SERVER/finelle-ui:latest"
+
+      - name: Update Container App
+        run: |
+          echo "Updating Container App with new image..."
+          az containerapp update \
+            --name "${{ steps.get-outputs.outputs.container-app-name }}" \
+            --resource-group "${{ steps.get-outputs.outputs.resource-group }}" \
+            --image "${{ steps.get-outputs.outputs.acr-login-server }}/finelle-ui:${{ github.sha }}" \
+            --only-show-errors
+
+      - name: Set up ACR pull permissions
+        run: |
+          echo "Setting up ACR pull permissions for Container App..."
+          PRINCIPAL_ID=$(az containerapp show \
+            --name "${{ steps.get-outputs.outputs.container-app-name }}" \
+            --resource-group "${{ steps.get-outputs.outputs.resource-group }}" \
+            --query "identity.principalId" -o tsv)
+
+          REGISTRY_LOGIN_SERVER="${{ steps.get-outputs.outputs.acr-login-server }}"
+          REGISTRY_NAME="$(echo "$REGISTRY_LOGIN_SERVER" | cut -d. -f1)"
+
+          ACR_RESOURCE_ID=$(az acr show \
+            --name "$REGISTRY_NAME" \
+            --resource-group "${{ steps.get-outputs.outputs.resource-group }}" \
+            --query "id" -o tsv)
+
+          EXISTING_ASSIGNMENT=$(az role assignment list \
+            --assignee "$PRINCIPAL_ID" \
+            --scope "$ACR_RESOURCE_ID" \
             --role "AcrPull" \
-            --scope $ACR_RESOURCE_ID
-          echo "ACR pull permissions assigned to Container App"
-        else
-          echo "ACR pull permissions already exist"
-        fi
+            --query "length(@)" -o tsv)
 
-    # Get the application URL
-    - name: Get application URL
-      id: get-url
-      run: |
-        APP_URL=$(az containerapp show \
-          --name ${{ steps.get-outputs.outputs.container-app-name }} \
-          --resource-group ${{ steps.get-outputs.outputs.resource-group }} \
-          --query "properties.configuration.ingress.fqdn" -o tsv)
-        echo "app-url=https://$APP_URL" >> $GITHUB_OUTPUT
-        echo "### 🚀 Deployment Successful!" >> $GITHUB_STEP_SUMMARY
-        echo "Application URL: https://$APP_URL" >> $GITHUB_STEP_SUMMARY
+          if [ "$EXISTING_ASSIGNMENT" = "0" ]; then
+            az role assignment create \
+              --assignee "$PRINCIPAL_ID" \
+              --role "AcrPull" \
+              --scope "$ACR_RESOURCE_ID" \
+              --only-show-errors
+            echo "ACR pull permissions assigned to Container App"
+          else
+            echo "ACR pull permissions already exist"
+          fi
 
-    # Output results
-    - name: Deployment Summary
-      run: |
-        echo "::notice::Deployment completed successfully!"
-        echo "::notice::Application URL: ${{ steps.get-url.outputs.app-url }}"
-        echo "::notice::Container Image: ${{ steps.get-outputs.outputs.acr-login-server }}/finelle-ui:${{ github.sha }}"
+      - name: Get application URL
+        id: get-url
+        run: |
+          APP_URL=$(az containerapp show \
+            --name "${{ steps.get-outputs.outputs.container-app-name }}" \
+            --resource-group "${{ steps.get-outputs.outputs.resource-group }}" \
+            --query "properties.configuration.ingress.fqdn" -o tsv)
+          echo "app-url=https://$APP_URL" >> $GITHUB_OUTPUT
+          echo "### 🚀 Deployment Successful!" >> $GITHUB_STEP_SUMMARY
+          echo "Application URL: https://$APP_URL" >> $GITHUB_STEP_SUMMARY
+
+      - name: Deployment Summary
+        run: |
+          echo "::notice::Deployment completed successfully!"
+          echo "::notice::Application URL: ${{ steps.get-url.outputs.app-url }}"
+          echo "::notice::Container Image: ${{ steps.get-outputs.outputs.acr-login-server }}/finelle-ui:${{ github.sha }}"
