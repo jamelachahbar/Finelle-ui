@@ -22,27 +22,18 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    # Only run on merged PRs (still runs on push and workflow_dispatch)
     if: github.event_name != 'pull_request' || github.event.pull_request.merged == true
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Node (no cache input => no cache restore)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22.x'
 
-      # CI-only pin to avoid flaky tarball for @types/react@18.3.20
-      # (Does NOT modify your repo; updates the lock in the runner only.)
-      - name: Pin @types/react away from 18.3.20 (CI-only)
-        run: |
-          npm pkg set "overrides.@types/react=18.3.19"
-          npm i --package-lock-only
-
-      # Fresh npm cache + robust network settings
+      # Force fresh npm cache + robust network settings
       - name: Prep clean npm cache + retries
         run: |
           npm config set cache "$(mktemp -d)"
@@ -53,6 +44,13 @@ jobs:
           node -v
           npm -v
           npm cache verify || true
+
+      # 🔧 CI-only lockfile regen to dodge flaky @types/react@18.3.20
+      - name: Regenerate lockfile with override (CI-only)
+        run: |
+          rm -f package-lock.json
+          npm pkg set "overrides.@types/react=18.3.19"
+          npm install --package-lock-only
 
       - name: Install dependencies
         run: npm ci --prefer-online --no-audit --no-fund
