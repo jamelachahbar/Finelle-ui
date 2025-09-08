@@ -29,17 +29,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Node (no caching input => no cache restore)
+      # Node (no cache input => no cache restore)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22.x'
 
+      # CI-only pin to avoid flaky tarball for @types/react@18.3.20
+      # (Does NOT modify your repo; updates the lock in the runner only.)
+      - name: Pin @types/react away from 18.3.20 (CI-only)
+        run: |
+          npm pkg set "overrides.@types/react=18.3.19"
+          npm i --package-lock-only
+
+      # Fresh npm cache + robust network settings
       - name: Prep clean npm cache + retries
         run: |
           npm config set cache "$(mktemp -d)"
           npm config set fetch-retries 5
           npm config set fetch-retry-maxtimeout 600000
+          npm config set network-timeout 600000
           npm config set registry https://registry.npmjs.org/
           node -v
           npm -v
