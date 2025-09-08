@@ -1,5 +1,5 @@
 // src/components/NavBar.tsx
-import { makeStyles, tokens } from "@fluentui/react-components";
+import { makeStyles } from "@fluentui/react-components";
 import { Link } from "react-router-dom";
 import { Button } from "@fluentui/react-components";
 import { Home24Regular, Chat24Regular } from "@fluentui/react-icons";
@@ -10,8 +10,8 @@ const useStyles = makeStyles({
     justifyContent: "space-between",
     alignItems: "center",
     padding: "1rem",
-    backgroundColor: "#f9f9f9",
-    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
+    backgroundColor: "#f8f9fa",
+    borderBottom: `1px solid #e8eaed`,
   },
   logo: {
     fontWeight: 600,
@@ -19,6 +19,7 @@ const useStyles = makeStyles({
     display: "flex",
     alignItems: "center",
     gap: "0.5rem",
+    color: "#3c4043",
   },
   links: {
     display: "flex",
@@ -38,8 +39,10 @@ const useStyles = makeStyles({
     borderRadius: "6px",
     fontSize: "0.9375rem",
     fontWeight: 500,
+    color: "#5f6368",
     ":hover": {
-      backgroundColor: tokens.colorNeutralBackground3Hover,
+      backgroundColor: "#f1f3f4",
+      color: "#3c4043",
     },
   },
 });

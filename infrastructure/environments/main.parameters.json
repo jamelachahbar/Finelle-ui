@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "projectName": {
+      "value": "finelle"
+    },
+    "environmentName": {
+      "value": "dev"
+    },
+    "location": {
+      "value": "eastus2"
+    },
+    "tags": {
+      "value": {
+        "project": "finelle",
+        "environment": "dev",
+        "owner": "finelle-team",
+        "cost-center": "engineering",
+        "deployment-method": "bicep-avm"
+      }
+    }
+  }
+}

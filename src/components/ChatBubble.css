@@ -1,58 +1,68 @@
-/* filepath: c:\_repos\finops-toolkit-1\src\Finelle\frontend\src\components\ChatBubble.css */
-/* === jzy Chat Bubble Styling === */
+/* ChatBubble.css - Google Gemini inspired with beautiful icons */
 
 .jzy-chat-bubble {
-    padding: 12px;
-    margin: 8px;
-    border-radius: 12px;
-    background-color: #f5f5f5;
-    font-family: "Segoe UI", sans-serif;
+    padding: 20px 24px;
+    margin: 16px 0;
+    border-radius: 18px;
+    font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     overflow-wrap: break-word;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    position: relative;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
-/* Roles */
+/* User messages - completely blue, with better contrast */
 .jzy-user {
-    background-color: #e0f7fa;
-    align-self: flex-end;
+    background: #1a73e8;
+    color: #ffffff;
+    margin-left: auto;
+    margin-right: 0;
+    max-width: 80%;
+    box-shadow: 0 3px 12px rgba(26, 115, 232, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Agent messages - left aligned, clean design */
 .jzy-agent {
-    background-color: #f5f5f5;
-    align-self: flex-start;
+    background: #ffffff;
+    color: #3c4043;
+    margin-left: 0;
+    margin-right: auto;
+    max-width: 85%;
+    border: 1px solid #e8eaed;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
+/* System messages */
 .jzy-system {
-    font-style: italic;
-    font-size: 0.95em;
-    background-color: #fff8e1;
-    padding: 12px;
-    margin: 8px;
-    border-radius: 12px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 100%);
+    color: #e65100;
+    border: 1px solid #ffcc02;
+    font-style: normal;
+    font-size: 0.875rem;
+    font-weight: 400;
+    margin: 12px auto;
+    max-width: 90%;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(230, 81, 0, 0.15);
 }
 
-.jzy-system {
-    background-color: #fff8e1;
-    color: #333;
-}
-
-/* Meta */
+/* Meta information styling */
 .jzy-chat-meta {
-    font-size: 0.85em;
-    font-weight: bold;
-    margin-bottom: 4px;
-    color: #555;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: rgba(255, 255, 255, 0.95);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-.hljs {
-    background: #282c34;
-    color: #ffffff;
-    padding: 12px;
-    border-radius: 6px;
+.jzy-agent .jzy-chat-meta {
+    color: #5f6368;
 }
 
 .jzy-chat-role {
@@ -60,102 +70,181 @@
 }
 
 .jzy-chat-time {
-    font-size: 0.8em;
-    color: #888;
+    font-size: 0.7rem;
+    opacity: 0.7;
 }
 
-/* Content */
+/* Content styling */
 .jzy-chat-content {
-    font-size: 0.905em;
-    line-height: 1.4;
+    font-size: 1rem;
+    line-height: 1.6;
+    font-weight: 400;
     display: block;
     position: relative;
-    z-index: 1;
-    pointer-events: auto;
 }
 
-.jzy-chat-content * {
-    pointer-events: auto;
+.jzy-user .jzy-chat-content {
+    color: white;
+}
+
+.jzy-agent .jzy-chat-content {
+    color: #3c4043;
 }
 
 .jzy-chat-content h1,
 .jzy-chat-content h2,
-.jzy-chat-content h3,
-.jzy-chat-content p,
+.jzy-chat-content h3 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    font-weight: 500;
+    line-height: 1.3;
+}
+
+.jzy-chat-content h1 {
+    font-size: 1.5rem;
+}
+
+.jzy-chat-content h2 {
+    font-size: 1.25rem;
+}
+
+.jzy-chat-content h3 {
+    font-size: 1.125rem;
+}
+
+.jzy-chat-content p {
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+
 .jzy-chat-content li {
-    margin-top: 0.08rem;
-    margin-bottom: 0.08rem;
+    margin-bottom: 0.5rem;
 }
 
 .jzy-chat-content strong {
-    font-weight: 500;
-    margin-bottom: 0.10rem;
+    font-weight: 600;
 }
 
-/* Markdown Table */
+/* Table styling - Google Material Design inspired */
 .jzy-chat-content table {
     border-collapse: separate;
     border-spacing: 0;
     border-radius: 12px;
     overflow: hidden;
-    margin-top: 8px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    margin: 1.5rem 0;
+    width: 100%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background: white;
 }
 
-/* Reference link styling within chat bubbles */
-.jzy-chat-bubble .jzy-reference-link {
-    margin: 2px 0;
-    display: inline-flex;
-    align-items: center;
-    border-radius: 4px;
-    background-color: rgba(0, 120, 212, 0.1);
-    color: #0078d4;
-    font-weight: 600;
-    text-decoration: none;
-    padding: 2px 6px;
-    transition: all 0.2s ease;
+.jzy-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 1.5rem 0;
+    font-size: 0.875rem;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background: white;
 }
 
-.jzy-chat-bubble .jzy-reference-link:hover {
-    background-color: rgba(0, 120, 212, 0.2);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.jzy-table th {
+    background: #f8f9fa;
+    color: #3c4043;
+    font-weight: 500;
+    text-align: left;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e8eaed;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-.jzy-chat-bubble .jzy-educational-link {
-    background-color: rgba(0, 120, 212, 0.15);
-    border-left: 2px solid #0078d4;
+.jzy-table td {
+    padding: 16px 20px;
+    border-bottom: 1px solid #f1f3f4;
+    vertical-align: top;
+    color: #3c4043;
 }
 
-.jzy-chat-bubble .jzy-reference-icon {
-    margin-right: 4px;
-    font-size: 0.9em;
+.jzy-table tr:last-child td {
+    border-bottom: none;
 }
 
-/* Tag styling */
+.jzy-table tr:nth-child(even) {
+    background: #fafbfc;
+}
+
+.jzy-table tr:hover {
+    background: #f8f9fa;
+}
+
+/* Tag styling - Google Material chips inspired */
 .jzy-tag-user,
 .jzy-tag-agent,
 .jzy-tag-system,
 .jzy-tag-assistant {
-    border-radius: 12px;
-    padding: 2px 8px;
-    font-size: 0.85em;
+    border-radius: 16px;
+    padding: 4px 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .jzy-tag-user {
-    background-color: #64b5f6;
-    color: white;
+    background: rgba(255, 255, 255, 0.9);
+    color: #1a73e8;
+    border: 1px solid rgba(255, 255, 255, 1);
+    font-weight: 600;
 }
 
 .jzy-tag-agent,
 .jzy-tag-assistant {
-    background-color: #b581c7;
-    color: white;
+    background: rgba(52, 168, 83, 0.1);
+    color: #34a853;
 }
 
 .jzy-tag-system {
-    background-color: #ffb74d;
-    color: white;
+    background: rgba(251, 188, 5, 0.1);
+    color: #fbbc05;
+}
+
+/* Reference links */
+.jzy-chat-bubble .jzy-reference-link {
+    margin: 4px 2px;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 20px;
+    background: rgba(26, 115, 232, 0.1);
+    color: #1a73e8;
+    font-weight: 500;
+    text-decoration: none;
+    padding: 6px 12px;
+    font-size: 0.875rem;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.jzy-chat-bubble .jzy-reference-link:hover {
+    background: rgba(26, 115, 232, 0.15);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(26, 115, 232, 0.2);
+}
+
+.jzy-chat-bubble .jzy-educational-link {
+    background: rgba(52, 168, 83, 0.1);
+    color: #34a853;
+    border-left: none;
+}
+
+.jzy-chat-bubble .jzy-educational-link:hover {
+    background: rgba(52, 168, 83, 0.15);
+}
+
+.jzy-chat-bubble .jzy-reference-icon {
+    margin-right: 6px;
+    font-size: 0.875rem;
 }
 
 /* Markdown Table */
@@ -191,60 +280,108 @@
     background-color: #f0f7ff;
 }
 
-/* Code styling */
+/* Code block styling */
 .jzy-code-block {
-    background-color: #1e1e1e;
+    background: #1e1e1e;
     color: #d4d4d4;
-    padding: 12px;
-    border-radius: 8px;
-    margin: 12px 0;
+    padding: 20px;
+    border-radius: 12px;
+    margin: 1.5rem 0;
     position: relative;
-    font-family: "Consolas", "Monaco", monospace;
-    font-size: 0.9em;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+    font-size: 0.875rem;
     overflow-x: auto;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* Custom Tag Styling */
-.jzy-markdown a.tag {
-    background-color: #e4f3ff;
-    color: #007acc;
-    padding: 2px 8px;
+.hljs {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 20px;
     border-radius: 12px;
-    font-size: 0.85em;
+}
+
+/* Inline code */
+.jzy-chat-content code:not(.hljs) {
+    background: rgba(0, 0, 0, 0.08);
+    color: #d73a49;
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+    font-size: 0.875em;
+}
+
+.jzy-user .jzy-chat-content code:not(.hljs) {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+/* Custom styling for markdown elements */
+.jzy-markdown a.tag {
+    background: rgba(26, 115, 232, 0.1);
+    color: #1a73e8;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 0.75rem;
     margin: 0 4px;
     text-decoration: none;
-    transition: background-color 0.3s ease;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .jzy-markdown a.tag:hover {
-    background-color: #d0e8fb;
+    background: rgba(26, 115, 232, 0.15);
 }
 
-/* Blockquote Styling */
+/* Blockquote styling */
 .jzy-markdown blockquote {
-    margin: 8px 0;
-    padding: 8px 12px;
-    border-left: 3px solid #90caf9;
-    background-color: rgba(144, 202, 249, 0.1);
-    font-style: italic;
+    margin: 1.5rem 0;
+    padding: 16px 20px;
+    border-left: 4px solid #1a73e8;
+    background: rgba(26, 115, 232, 0.05);
+    border-radius: 0 8px 8px 0;
+    font-style: normal;
+    color: #3c4043;
 }
 
-/* Citation List */
+.jzy-user .jzy-markdown blockquote {
+    border-left-color: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Citation styling */
 .jzy-citation-list {
-    margin-top: 12px;
-    padding-top: 8px;
-    border-top: 1px solid #eee;
-    font-size: 0.85em;
-    color: #777;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e8eaed;
+    font-size: 0.875rem;
+    color: #5f6368;
+}
+
+.jzy-agent .jzy-citation-list {
+    border-top-color: #e8eaed;
+}
+
+.jzy-user .jzy-citation-list {
+    border-top-color: rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.8);
 }
 
 .jzy-citation-item {
-    margin: 4px 0;
+    margin: 8px 0;
 }
 
 .jzy-citation-link {
-    color: #0078d4;
+    color: #1a73e8;
     text-decoration: none;
+    font-weight: 500;
+}
+
+.jzy-user .jzy-citation-link {
+    color: rgba(255, 255, 255, 0.9);
 }
 
 .jzy-citation-link:hover {

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Button, Text } from '@fluentui/react-components';
+import { Button } from '@fluentui/react-components';
 import ChatBubble from './ChatBubble';
 import TypingBubble from './TypingBubble';
 import './ChatWindow.css';
@@ -342,64 +342,66 @@ export default function ChatWindow() {
     }, 500);
   }, []);
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '16px 16px 0 16px' }}>      <div
+    <div style={{ 
+      height: '100vh', 
+      display: 'flex', 
+      flexDirection: 'column', 
+      background: 'linear-gradient(180deg, #fafbfc 0%, #f8f9fa 100%)',
+      fontFamily: "'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    }}>      <div
         ref={containerRef}
-        id="chat-container"        style={{
+        id="chat-container"        
+        style={{
           flex: 1,
           overflowY: 'auto',
           overflowX: 'hidden',
-          paddingBottom: 120, // Space for input area
+          paddingBottom: 140,
           position: 'relative',
+          maxWidth: '100%',
+          margin: '0 auto',
+          width: '100%',
+          scrollBehavior: 'smooth',
         }}
       >
         {messages.length === 0 ? (
           <div className="welcome-container">
-            <Text
-              size={800}
-              weight="semibold"
-              style={{
-                background: 'linear-gradient(to right, #4f46e5, #9333ea)',
-                WebkitBackgroundClip: 'text',
-                color: 'transparent',
-              }}
-            >
+            <div className="welcome-title">
               Hello, FinOps Explorer
-            </Text>
-            <Text size={400} style={{ marginTop: 8 }}>
-              Ask Finelle anything about your Azure environment.
-            </Text>
-            <div
-              style={{
-                marginTop: 24,
-                display: 'flex',
-                gap: 8,
-                flexWrap: 'wrap',
-                justifyContent: 'center',
-              }}
-            >
+            </div>
+            <div className="welcome-subtitle">
+              Ask Finelle anything about your Azure environment and get intelligent insights.
+            </div>
+            <div className="suggestions-grid">
               {promptSuggestions.map((suggestion, idx) => (
-                <Button
+                <div
                   key={idx}
-                  appearance="secondary"
                   className="prompt-tile-glow"
                   onClick={() => {
                     setInput(suggestion);
-                    handleSend();
+                    // Focus the input field after setting the text
+                    setTimeout(() => {
+                      inputRef.current?.focus();
+                      // Position cursor at the end
+                      if (inputRef.current) {
+                        inputRef.current.setSelectionRange(suggestion.length, suggestion.length);
+                      }
+                    }, 50);
                   }}
                 >
                   {suggestion}
-                </Button>
+                </div>
               ))}
             </div>
           </div>
         ) : (
           <div
             style={{
-              maxWidth: 800,
+              maxWidth: 768,
               margin: '0 auto',
               display: 'flex',
               flexDirection: 'column',
-              gap: 12,
+              gap: 20,
+              padding: '20px 24px',
             }}
             className="jzy-chat-messages"
           >
@@ -445,10 +447,10 @@ export default function ChatWindow() {
             className="jzy-chat-textarea"
             rows={1}
             value={input}
-            placeholder="Ask Finelle anything..."
+            placeholder="Ask Finelle anything... (Press Enter to send)"
             onChange={handleInputChange}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shijzyey) {
+              if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 handleSend();
               }

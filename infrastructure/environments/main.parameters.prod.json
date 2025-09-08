@@ -1,0 +1,26 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "projectName": {
+      "value": "finelle"
+    },
+    "environmentName": {
+      "value": "prod"
+    },
+    "location": {
+      "value": "East US 2"
+    },
+    "tags": {
+      "value": {
+        "project": "finelle",
+        "environment": "production",
+        "owner": "finelle-team",
+        "cost-center": "engineering",
+        "deployment-method": "bicep-avm",
+        "business-unit": "finops",
+        "compliance": "required"
+      }
+    }
+  }
+}

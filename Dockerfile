@@ -1,12 +1,14 @@
-FROM node:20-slim
+# Simple production build using pre-built assets
+FROM nginx:alpine
 
-WORKDIR /app
+# Copy pre-built assets to nginx
+COPY dist /usr/share/nginx/html
 
-COPY package.json package-lock.json ./
-RUN npm install
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/nginx.conf
 
-COPY . .
+# Expose port 80
+EXPOSE 80
 
-EXPOSE 5173
-
-CMD ["npm", "run", "dev", "--", "--host"]
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]
