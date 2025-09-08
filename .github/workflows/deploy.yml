@@ -22,6 +22,7 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    # Only run on merged PRs (still runs on push and workflow_dispatch)
     if: github.event_name != 'pull_request' || github.event.pull_request.merged == true
 
     steps:
@@ -33,11 +34,12 @@ jobs:
         with:
           node-version: '22.x'
 
-      # Force fresh npm cache + robust network settings
+      # Fresh npm cache + robust fetch settings (npm v10-compatible)
       - name: Prep clean npm cache + retries
         run: |
           npm config set cache "$(mktemp -d)"
           npm config set fetch-retries 5
+          npm config set fetch-retry-mintimeout 20000
           npm config set fetch-retry-maxtimeout 600000
           npm config set fetch-timeout 600000
           npm config set registry https://registry.npmjs.org/
@@ -45,11 +47,20 @@ jobs:
           npm -v
           npm cache verify || true
 
-      # 🔧 CI-only lockfile regen to dodge flaky @types/react@18.3.20
-      - name: Regenerate lockfile with override (CI-only)
+      # 🔧 CI-only: bump direct @types/react to avoid flaky 18.3.20 tarball
+      # This does NOT modify your repo; it edits package.json in the runner and regenerates the lockfile locally.
+      - name: Bump @types/react to safe patch (CI-only) and regenerate lockfile
         run: |
+          # Update whichever section contains @types/react (devDependencies or dependencies)
+          npm pkg set "devDependencies.@types/react=18.3.19" || true
+          npm pkg set "dependencies.@types/react=18.3.19" || true
+
+          # (Optional) keep react-dom types aligned if present
+          npm pkg set "devDependencies.@types/react-dom=18.3.0" || true
+          npm pkg set "dependencies.@types/react-dom=18.3.0" || true
+
+          # Recreate lockfile on the runner so npm ci installs the new resolution
           rm -f package-lock.json
-          npm pkg set "overrides.@types/react=18.3.19"
           npm install --package-lock-only
 
       - name: Install dependencies
