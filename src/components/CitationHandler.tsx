@@ -1,4 +1,3 @@
-// filepath: c:\_repos\finops-toolkit-1\src\Finelle\frontend\src\components\CitationHandler.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import './CitationHandler.css';
 import { Citation, convertToCitationData } from '../utils/citationUtils';
