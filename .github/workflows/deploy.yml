@@ -12,7 +12,7 @@ env:
   AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
   AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-  CONTAINER_REGISTRY_LOGIN_SERVER: ${{ vars.CONTAINER_REGISTRY_LOGIN_SERVER }}
+  CONTAINER_REGISTRY_LOGIN_SERVER: ${{ vars.CONTAINER_REGISTRY_LOGIN_SERVER }} # optional, will be overwritten by IaC outputs
   RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP }}
 
 permissions:
@@ -22,19 +22,18 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    # Only run on merged PRs (still runs on push and workflow_dispatch)
     if: github.event_name != 'pull_request' || github.event.pull_request.merged == true
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Node 22 + clean npm cache + lock fix you already applied earlier
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22.x'
 
-      # Fresh npm cache + robust fetch settings (npm v10-compatible)
       - name: Prep clean npm cache + retries
         run: |
           npm config set cache "$(mktemp -d)"
@@ -47,19 +46,10 @@ jobs:
           npm -v
           npm cache verify || true
 
-      # 🔧 CI-only: bump direct @types/react to avoid flaky 18.3.20 tarball
-      # This does NOT modify your repo; it edits package.json in the runner and regenerates the lockfile locally.
       - name: Bump @types/react to safe patch (CI-only) and regenerate lockfile
         run: |
-          # Update whichever section contains @types/react (devDependencies or dependencies)
           npm pkg set "devDependencies.@types/react=18.3.19" || true
           npm pkg set "dependencies.@types/react=18.3.19" || true
-
-          # (Optional) keep react-dom types aligned if present
-          npm pkg set "devDependencies.@types/react-dom=18.3.0" || true
-          npm pkg set "dependencies.@types/react-dom=18.3.0" || true
-
-          # Recreate lockfile on the runner so npm ci installs the new resolution
           rm -f package-lock.json
           npm install --package-lock-only
 
@@ -72,13 +62,19 @@ jobs:
       - name: Build application
         run: npm run build
 
-      - name: Azure Login
+      # ---- Azure login & RG-scope deployment (matches your Bicep) ----
+      - name: Azure Login (OIDC)
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Ensure resource group exists
+        run: |
+          az group create -n "${{ env.RESOURCE_GROUP }}" -l "eastus2" --only-show-errors
+
+      # (Optional) Only deploy infra when changed or on manual run
       - name: Check for infrastructure changes
         id: infra-changes
         uses: dorny/paths-filter@v3
@@ -87,93 +83,86 @@ jobs:
             infra:
               - 'infrastructure/**'
 
-      - name: Deploy infrastructure
+      - name: Deploy infrastructure (resource group scope)
         if: steps.infra-changes.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
+        id: rg-deploy
         run: |
-          echo "Deploying infrastructure..."
-          az deployment sub create \
-            --location "East US 2" \
+          DEPLOYMENT_NAME="finelle-ui-rg-$(date +%Y%m%d-%H%M%S)"
+          az deployment group create \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "$DEPLOYMENT_NAME" \
             --template-file infrastructure/main.bicep \
-            --parameters infrastructure/environments/main.parameters.json \
-            --name "finelle-ui-infra-$(date +%Y%m%d-%H%M%S)" \
+            --parameters location="eastus2" \
             --only-show-errors
 
-      - name: Get deployment outputs
-        id: get-outputs
-        run: |
-          DEPLOYMENT_NAME=$(az deployment sub list --query "[?contains(name, 'finelle-ui-infra')].name | sort(@) | [-1]" -o tsv)
-          ACR_LOGIN_SERVER=$(az deployment sub show --name "$DEPLOYMENT_NAME" --query "properties.outputs.containerRegistryLoginServer.value" -o tsv)
-          RESOURCE_GROUP_NAME=$(az deployment sub show --name "$DEPLOYMENT_NAME" --query "properties.outputs.resourceGroupName.value" -o tsv)
-          CONTAINER_APP_NAME=$(az deployment sub show --name "$DEPLOYMENT_NAME" --query "properties.outputs.containerAppName.value" -o tsv)
+          # Read outputs straight from the RG deployment
+          ACR_LOGIN_SERVER=$(az deployment group show \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "$DEPLOYMENT_NAME" \
+            --query "properties.outputs.containerRegistryLoginServer.value" -o tsv)
+
+          CONTAINER_APP_NAME=$(az deployment group show \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "$DEPLOYMENT_NAME" \
+            --query "properties.outputs.containerAppName.value" -o tsv)
 
           echo "acr-login-server=$ACR_LOGIN_SERVER" >> $GITHUB_OUTPUT
-          echo "resource-group=$RESOURCE_GROUP_NAME" >> $GITHUB_OUTPUT
           echo "container-app-name=$CONTAINER_APP_NAME" >> $GITHUB_OUTPUT
 
+      # If infra wasn't redeployed, look up existing outputs from the RG (ACR + Container App)
+      - name: Resolve ACR & Container App when infra not redeployed
+        if: steps.infra-changes.outputs.infra != 'true' && github.event_name != 'workflow_dispatch'
+        id: resolve-existing
+        run: |
+          # Try to infer from resources in the RG (names are deterministic in your Bicep)
+          # ACR login server:
+          ACR_LOGIN_SERVER=$(az acr list -g "${{ env.RESOURCE_GROUP }}" --query "[0].loginServer" -o tsv)
+          # Container App name:
+          CONTAINER_APP_NAME=$(az containerapp list -g "${{ env.RESOURCE_GROUP }}" --query "[0].name" -o tsv)
+
+          if [ -z "$ACR_LOGIN_SERVER" ] || [ -z "$CONTAINER_APP_NAME" ]; then
+            echo "::error::ACR or Container App not found. Re-run with infra deploy or check the RG."
+            exit 1
+          fi
+
+          echo "acr-login-server=$ACR_LOGIN_SERVER" >> $GITHUB_OUTPUT
+          echo "container-app-name=$CONTAINER_APP_NAME" >> $GITHUB_OUTPUT
+
+      # Select the effective outputs (from deploy step if it ran, else from resolve-existing)
+      - name: Set effective outputs
+        id: effective
+        run: |
+          echo "acr-login-server=${{ steps.rg-deploy.outputs.acr-login-server || steps.resolve-existing.outputs.acr-login-server }}" >> $GITHUB_OUTPUT
+          echo "container-app-name=${{ steps.rg-deploy.outputs.container-app-name || steps.resolve-existing.outputs.container-app-name }}" >> $GITHUB_OUTPUT
+
+      # ---- Build & push using the ACR created by Bicep ----
       - name: Build and push Docker image
         run: |
-          REGISTRY_LOGIN_SERVER="${{ steps.get-outputs.outputs.acr-login-server }}"   # e.g., myregistry.azurecr.io
-          REGISTRY_NAME="$(echo "$REGISTRY_LOGIN_SERVER" | cut -d. -f1)"             # e.g., myregistry
+          REGISTRY_LOGIN_SERVER="${{ steps.effective.outputs.acr-login-server }}"
+          REGISTRY_NAME="$(echo "$REGISTRY_LOGIN_SERVER" | cut -d. -f1)"
 
-          # Login to ACR (expects registry NAME)
           az acr login --name "$REGISTRY_NAME"
 
-          # Build and tag the image
           docker build -t "$REGISTRY_LOGIN_SERVER/finelle-ui:${{ github.sha }}" .
           docker tag   "$REGISTRY_LOGIN_SERVER/finelle-ui:${{ github.sha }}" "$REGISTRY_LOGIN_SERVER/finelle-ui:latest"
 
-          # Push the image
           docker push  "$REGISTRY_LOGIN_SERVER/finelle-ui:${{ github.sha }}"
           docker push  "$REGISTRY_LOGIN_SERVER/finelle-ui:latest"
 
       - name: Update Container App
         run: |
-          echo "Updating Container App with new image..."
           az containerapp update \
-            --name "${{ steps.get-outputs.outputs.container-app-name }}" \
-            --resource-group "${{ steps.get-outputs.outputs.resource-group }}" \
-            --image "${{ steps.get-outputs.outputs.acr-login-server }}/finelle-ui:${{ github.sha }}" \
+            --name "${{ steps.effective.outputs.container-app-name }}" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --image "${{ steps.effective.outputs.acr-login-server }}/finelle-ui:${{ github.sha }}" \
             --only-show-errors
-
-      - name: Set up ACR pull permissions
-        run: |
-          echo "Setting up ACR pull permissions for Container App..."
-          PRINCIPAL_ID=$(az containerapp show \
-            --name "${{ steps.get-outputs.outputs.container-app-name }}" \
-            --resource-group "${{ steps.get-outputs.outputs.resource-group }}" \
-            --query "identity.principalId" -o tsv)
-
-          REGISTRY_LOGIN_SERVER="${{ steps.get-outputs.outputs.acr-login-server }}"
-          REGISTRY_NAME="$(echo "$REGISTRY_LOGIN_SERVER" | cut -d. -f1)"
-
-          ACR_RESOURCE_ID=$(az acr show \
-            --name "$REGISTRY_NAME" \
-            --resource-group "${{ steps.get-outputs.outputs.resource-group }}" \
-            --query "id" -o tsv)
-
-          EXISTING_ASSIGNMENT=$(az role assignment list \
-            --assignee "$PRINCIPAL_ID" \
-            --scope "$ACR_RESOURCE_ID" \
-            --role "AcrPull" \
-            --query "length(@)" -o tsv)
-
-          if [ "$EXISTING_ASSIGNMENT" = "0" ]; then
-            az role assignment create \
-              --assignee "$PRINCIPAL_ID" \
-              --role "AcrPull" \
-              --scope "$ACR_RESOURCE_ID" \
-              --only-show-errors
-            echo "ACR pull permissions assigned to Container App"
-          else
-            echo "ACR pull permissions already exist"
-          fi
 
       - name: Get application URL
         id: get-url
         run: |
           APP_URL=$(az containerapp show \
-            --name "${{ steps.get-outputs.outputs.container-app-name }}" \
-            --resource-group "${{ steps.get-outputs.outputs.resource-group }}" \
+            --name "${{ steps.effective.outputs.container-app-name }}" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
             --query "properties.configuration.ingress.fqdn" -o tsv)
           echo "app-url=https://$APP_URL" >> $GITHUB_OUTPUT
           echo "### 🚀 Deployment Successful!" >> $GITHUB_STEP_SUMMARY
@@ -181,6 +170,5 @@ jobs:
 
       - name: Deployment Summary
         run: |
-          echo "::notice::Deployment completed successfully!"
           echo "::notice::Application URL: ${{ steps.get-url.outputs.app-url }}"
-          echo "::notice::Container Image: ${{ steps.get-outputs.outputs.acr-login-server }}/finelle-ui:${{ github.sha }}"
+          echo "::notice::Container Image: ${{ steps.effective.outputs.acr-login-server }}/finelle-ui:${{ github.sha }}"
