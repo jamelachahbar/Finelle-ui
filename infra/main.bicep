@@ -134,7 +134,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.11.0' = {
     containers: [
       {
         name: 'finelle-ui'
-        image: '${containerRegistry.outputs.loginServer}/finelle-ui:latest'
+        image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
         resources: {
           cpu: '0.25'
           memory: '0.5Gi'
@@ -196,12 +196,20 @@ resource acrResource 'Microsoft.ContainerRegistry/registries@2023-07-01' existin
   name: acrName
 }
 
-// Grant the Container App system-assigned managed identity AcrPull permissions
+// Replace roleAssignment block to reference the Container App's identity via a runtime reference and ensure deployment ordering
+resource containerAppResource 'Microsoft.App/containerApps@2023-05-01' existing = {
+  name: containerAppName
+}
+
 resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(acrResource.id, containerAppName, '7f951dda-4ed3-4680-a7ca-43fe172d538d')
   scope: acrResource
+  dependsOn: [
+    containerApp
+  ]
   properties: {
-    principalId: containerApp.outputs.systemAssignedMIPrincipalId
+    // Use the resource reference identity principalId of the deployed Container App
+    principalId: containerAppResource.identity.principalId
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull role
     principalType: 'ServicePrincipal'
   }

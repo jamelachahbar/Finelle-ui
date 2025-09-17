@@ -6,8 +6,12 @@ metadata:
 # Infrastructure configuration
 infra:
   provider: bicep
-  path: infrastructure
+  path: infra
   module: main
+  outputs:
+    containerRegistryLoginServer: containerRegistryLoginServer
+    containerRegistryName: containerRegistryName
+    containerAppFQDN: containerAppFQDN
 
 # Services configuration
 services:
@@ -22,6 +26,30 @@ services:
 
 # Hooks for deployment lifecycle
 hooks:
+  postprovision:
+    windows:
+      shell: pwsh
+      run: |
+        echo "Post-provision hook: attempting to assign AcrPull role to container app identity..."
+        if ($Env:AZURE_CONTAINERREGISTRYNAME -and $Env:AZURE_CONTAINERAPPNAME -and $Env:AZURE_RESOURCE_GROUP) {
+          Write-Output "Detected azd-provided environment variables. Running role assignment helper..."
+          pwsh ./infra/assign-acr-role.ps1 -ResourceGroup $Env:AZURE_RESOURCE_GROUP -ContainerAppName $Env:AZURE_CONTAINERAPPNAME -AcrName $Env:AZURE_CONTAINERREGISTRYNAME
+        } else {
+          Write-Output "Automatic variables not found. Run the helper manually:"
+          Write-Output "pwsh ./infra/assign-acr-role.ps1 -ResourceGroup \"<resource-group>\" -ContainerAppName \"<container-app-name>\" -AcrName \"<acr-name>\""
+        }
+    posix:
+      shell: sh
+      run: |
+        echo "Post-provision hook: attempting to assign AcrPull role to container app identity..."
+        if [ -n "$AZURE_CONTAINERREGISTRYNAME" ] && [ -n "$AZURE_CONTAINERAPPNAME" ] && [ -n "$AZURE_RESOURCE_GROUP" ]; then
+          echo "Detected azd-provided environment variables. Running role assignment helper..."
+          pwsh ./infra/assign-acr-role.ps1 -ResourceGroup "$AZURE_RESOURCE_GROUP" -ContainerAppName "$AZURE_CONTAINERAPPNAME" -AcrName "$AZURE_CONTAINERREGISTRYNAME"
+        else
+          echo "Automatic variables not found. Run the helper manually:"
+          echo "pwsh ./infra/assign-acr-role.ps1 -ResourceGroup \"<resource-group>\" -ContainerAppName \"<container-app-name>\" -AcrName \"<acr-name>\""
+        fi
+
   predeploy:
     windows:
       shell: pwsh
@@ -35,7 +63,6 @@ hooks:
         echo "Starting pre-deployment checks..."
         echo "Building React application..."
         npm run build
-  
   postdeploy:
     windows:
       shell: pwsh
