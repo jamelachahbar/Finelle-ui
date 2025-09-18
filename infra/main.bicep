@@ -32,6 +32,7 @@ param tags object = {
 
 var acrName = 'acr${projectName}ui${environmentName}${resourceToken}'
 var logAnalyticsName = 'law-${projectName}-ui-${environmentName}-${resourceToken}'
+var appInsightsName = 'ai-${projectName}-ui-${environmentName}-${resourceToken}'
 var containerEnvName = 'cae-${projectName}-ui-${environmentName}-${resourceToken}'
 var containerAppName = 'ca-${projectName}-ui-${environmentName}-${resourceToken}'
 var userManagedIdentityName = 'id-${projectName}-ui-${environmentName}-${resourceToken}'
@@ -65,6 +66,25 @@ module logAnalytics 'br/public:avm/res/operational-insights/workspace:0.8.0' = {
     publicNetworkAccessForIngestion: 'Enabled'
     publicNetworkAccessForQuery: 'Enabled'
     useResourcePermissions: true
+  }
+}
+
+// ==========================
+// APPLICATION INSIGHTS
+// ==========================
+
+module applicationInsights 'br/public:avm/res/insights/component:0.4.1' = {
+  name: 'applicationInsightsDeployment'
+  params: {
+    name: appInsightsName
+    location: location
+    tags: tags
+    workspaceResourceId: logAnalytics.outputs.resourceId
+    applicationType: 'web'
+    kind: 'web'
+    disableIpMasking: false
+    disableLocalAuth: false
+    samplingPercentage: 100
   }
 }
 
@@ -162,6 +182,14 @@ module containerApp 'br/public:avm/res/app/container-app:0.11.0' = {
             name: 'PORT'
             value: '80'
           }
+          {
+            name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+            value: applicationInsights.outputs.connectionString
+          }
+          {
+            name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
+            value: applicationInsights.outputs.instrumentationKey
+          }
         ]
       }
     ]
@@ -258,3 +286,12 @@ output logAnalyticsWorkspaceName string = logAnalytics.outputs.name
 
 @description('The Log Analytics Workspace ID')
 output logAnalyticsWorkspaceId string = logAnalytics.outputs.resourceId
+
+@description('The Application Insights name')
+output applicationInsightsName string = applicationInsights.outputs.name
+
+@description('The Application Insights connection string')
+output applicationInsightsConnectionString string = applicationInsights.outputs.connectionString
+
+@description('The Application Insights instrumentation key')
+output applicationInsightsInstrumentationKey string = applicationInsights.outputs.instrumentationKey

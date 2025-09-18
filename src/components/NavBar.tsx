@@ -2,7 +2,7 @@
 import { makeStyles } from "@fluentui/react-components";
 import { Link } from "react-router-dom";
 import { Button } from "@fluentui/react-components";
-import { Home24Regular, Chat24Regular } from "@fluentui/react-icons";
+import { Home24Regular, Chat24Regular, DataTrending24Regular } from "@fluentui/react-icons";
 
 const useStyles = makeStyles({
   nav: {
@@ -61,6 +61,11 @@ export default function NavBar() {
         <Link to="/chat" className={styles.buttonLink}>
           <Button icon={<Chat24Regular />} appearance="transparent" className={styles.navButton}>
             Chat
+          </Button>
+        </Link>
+        <Link to="/telemetry" className={styles.buttonLink}>
+          <Button icon={<DataTrending24Regular />} appearance="transparent" className={styles.navButton}>
+            Telemetry
           </Button>
         </Link>
       </nav>

@@ -15,6 +15,8 @@
     "@fluentui/react": "^8.122.14",
     "@fluentui/react-components": "^9.64.0",
     "@fluentui/react-icons": "^2.0.300",
+    "@microsoft/applicationinsights-react-js": "^17.3.6",
+    "@microsoft/applicationinsights-web": "^3.3.9",
     "axios": "^1.8.4",
     "clear": "^0.1.0",
     "highlight.js": "^11.11.1",
@@ -32,7 +34,7 @@
   "devDependencies": {
     "@eslint/js": "^9.21.0",
     "@types/node": "^22.15.17",
-    "@types/react": "^18.3.19",
+    "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.6",
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^9.21.0",

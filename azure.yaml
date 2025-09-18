@@ -13,6 +13,7 @@ infra:
     containerRegistryName: containerRegistryName
     containerAppFQDN: containerAppFQDN
     AZURE_CONTAINER_REGISTRY_ENDPOINT: containerRegistryLoginServer
+    AZURE_APPLICATION_INSIGHTS_CONNECTION_STRING: applicationInsightsConnectionString
 
 # Services configuration
 services:
@@ -33,13 +34,48 @@ hooks:
       shell: pwsh
       run: |
         echo "Starting pre-deployment checks..."
+        echo "Using direct Application Insights connection string approach..."
+        
+        # Use the known working connection string directly
+        $connectionString = "InstrumentationKey=4422e612-5efc-4071-b1fa-3605a6b5e074;IngestionEndpoint=https://eastus2-3.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus2.livediagnostics.monitor.azure.com/;ApplicationId=80180c0b-b5fe-407b-baae-1c9ef9319d09"
+        echo "Connection string length: $($connectionString.Length)"
+        echo "Connection string preview: $($connectionString.Substring(0, 50))..."
+        
+        echo "Creating .env.production file..."
+        echo "VITE_APPINSIGHTS_CONNECTION_STRING=$connectionString" | Out-File -FilePath ".env.production" -Encoding utf8 -NoNewline
+        
+        echo "Verifying .env.production file:"
+        Get-Content ".env.production" | Write-Host
+        
+        echo "Setting runtime environment variable..."
+        $env:VITE_APPINSIGHTS_CONNECTION_STRING = $connectionString
+        echo "Runtime env var length: $($env:VITE_APPINSIGHTS_CONNECTION_STRING.Length)"
+        
         echo "Building React application..."
         npm run build
+        
+        echo "Verifying connection string is in built files..."
+        $jsFiles = Get-ChildItem -Path "dist/assets" -Filter "*.js" -Recurse
+        $found = $false
+        foreach ($file in $jsFiles) {
+          $content = Get-Content $file.FullName -Raw
+          if ($content -match "InstrumentationKey") {
+            echo "✅ Connection string found in $($file.Name)"
+            $found = $true
+            break
+          }
+        }
+        if (-not $found) {
+          echo "❌ Connection string NOT found in any JS files"
+          echo "Available JS files:"
+          $jsFiles | ForEach-Object { echo "  $($_.Name)" }
+        }
     posix:
       shell: sh
       run: |
         echo "Starting pre-deployment checks..."
         echo "Building React application..."
+        export VITE_APPINSIGHTS_CONNECTION_STRING="${applicationInsightsConnectionString}"
         npm run build
   postdeploy:
     windows:
