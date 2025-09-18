@@ -68,13 +68,44 @@ jobs:
         run: |
           curl -fsSL https://aka.ms/install-azd.sh | bash
 
+      # Debug: Check if secrets are available
+      - name: Debug - Verify Secrets
+        run: |
+          echo "Checking if secrets are properly set..."
+          if [ -z "${{ secrets.AZURE_CLIENT_ID }}" ]; then
+            echo "❌ AZURE_CLIENT_ID is empty or not set"
+          else
+            echo "✅ AZURE_CLIENT_ID is set (length: ${#AZURE_CLIENT_ID})"
+          fi
+          
+          if [ -z "${{ secrets.AZURE_TENANT_ID }}" ]; then
+            echo "❌ AZURE_TENANT_ID is empty or not set"
+          else
+            echo "✅ AZURE_TENANT_ID is set (length: ${#AZURE_TENANT_ID})"
+          fi
+          
+          if [ -z "${{ secrets.AZURE_SUBSCRIPTION_ID }}" ]; then
+            echo "❌ AZURE_SUBSCRIPTION_ID is empty or not set"
+          else
+            echo "✅ AZURE_SUBSCRIPTION_ID is set (length: ${#AZURE_SUBSCRIPTION_ID})"
+          fi
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       # Azure login using OIDC
       - name: Azure Login (OIDC)
-        uses: azure/login@v2
+        uses: azure/login@v1
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        env:
+          # Explicitly set environment variables as backup
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       # Bootstrap: Initial setup for first-time deployment
       - name: Bootstrap Azure Environment (First Time Setup)
