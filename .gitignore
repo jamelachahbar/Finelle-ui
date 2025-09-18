@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 
 .env
+# GitHub Actions bootstrap reference
+.env.github-actions

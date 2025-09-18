@@ -47,6 +47,41 @@ This project uses an **optimized deployment strategy** with placeholder images f
    azd provision
    ```
 
+## 🤖 GitHub Actions CI/CD
+
+Automate your deployments with GitHub Actions! Use our bootstrap scripts for one-time setup.
+
+### 🚀 Automated Bootstrap (Recommended)
+
+**PowerShell (Windows)**:
+```powershell
+.\bootstrap-github-actions.ps1
+```
+
+**Bash (Linux/macOS)**:
+```bash
+chmod +x bootstrap-github-actions.sh
+./bootstrap-github-actions.sh
+```
+
+The bootstrap script automatically:
+- ✅ Creates Azure Service Principal
+- ✅ Sets up GitHub repository secrets
+- ✅ Triggers initial deployment workflow
+- ✅ Configures Application Insights integration
+
+### 🛠️ Manual Setup
+
+If you prefer manual setup, see [GITHUB-ACTIONS-BOOTSTRAP.md](./GITHUB-ACTIONS-BOOTSTRAP.md) for detailed instructions.
+
+### 🔄 Workflow Features
+
+- **Automatic builds** on every push to main
+- **Infrastructure provisioning** with first-time bootstrap
+- **Application Insights telemetry** automatically configured
+- **Fast deployments** using Azure Developer CLI (~45 seconds)
+- **Security** with Azure OIDC authentication
+
 ### 📊 Deployment Performance
 - **Infrastructure Provisioning**: ~1 min 46 sec
 - **Application Deployment**: ~29 seconds  
