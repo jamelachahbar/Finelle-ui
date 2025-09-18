@@ -158,6 +158,48 @@ try {
         Write-Success "Service Principal created successfully"
         Write-Host "   Client ID: $($spOutput.clientId)" -ForegroundColor Gray
         Write-Host "   Tenant ID: $($spOutput.tenantId)" -ForegroundColor Gray
+        
+        # Configure federated credentials for GitHub Actions OIDC
+        Write-Step "Configuring federated credentials for GitHub Actions OIDC..."
+        
+        # Create temporary JSON file for main branch
+        $mainCredential = @{
+            name = "github-actions-finelle-ui-main"
+            issuer = "https://token.actions.githubusercontent.com"
+            subject = "repo:$RepoOwner/$RepoName`:ref:refs/heads/main"
+            audiences = @("api://AzureADTokenExchange")
+        } | ConvertTo-Json
+        
+        $mainCredential | Out-File -FilePath "temp-main-cred.json" -Encoding UTF8
+        
+        try {
+            az ad app federated-credential create --id $spOutput.clientId --parameters "temp-main-cred.json" | Out-Null
+            Write-Success "Configured federated credential for main branch"
+        } catch {
+            Write-Warning "Failed to configure main branch federated credential: $_"
+        }
+        
+        # Create temporary JSON file for pull requests
+        $prCredential = @{
+            name = "github-actions-finelle-ui-pr"
+            issuer = "https://token.actions.githubusercontent.com"
+            subject = "repo:$RepoOwner/$RepoName`:pull_request"
+            audiences = @("api://AzureADTokenExchange")
+        } | ConvertTo-Json
+        
+        $prCredential | Out-File -FilePath "temp-pr-cred.json" -Encoding UTF8
+        
+        try {
+            az ad app federated-credential create --id $spOutput.clientId --parameters "temp-pr-cred.json" | Out-Null
+            Write-Success "Configured federated credential for pull requests"
+        } catch {
+            Write-Warning "Failed to configure pull request federated credential: $_"
+        }
+        
+        # Clean up temporary files
+        Remove-Item "temp-main-cred.json", "temp-pr-cred.json" -ErrorAction SilentlyContinue
+        
+        Write-Success "Federated credentials configured for GitHub Actions OIDC"
     } else {
         throw "Service Principal creation failed"
     }
