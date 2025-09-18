@@ -12,6 +12,7 @@ infra:
     containerRegistryLoginServer: containerRegistryLoginServer
     containerRegistryName: containerRegistryName
     containerAppFQDN: containerAppFQDN
+    AZURE_CONTAINER_REGISTRY_ENDPOINT: containerRegistryLoginServer
 
 # Services configuration
 services:
@@ -23,33 +24,10 @@ services:
     docker:
       path: ./Dockerfile
       context: .
+      registry: ${AZURE_CONTAINER_REGISTRY_ENDPOINT}
 
 # Hooks for deployment lifecycle
 hooks:
-  postprovision:
-    windows:
-      shell: pwsh
-      run: |
-        echo "Post-provision hook: attempting to assign AcrPull role to container app identity..."
-        if ($Env:AZURE_CONTAINERREGISTRYNAME -and $Env:AZURE_CONTAINERAPPNAME -and $Env:AZURE_RESOURCE_GROUP) {
-          Write-Output "Detected azd-provided environment variables. Running role assignment helper..."
-          pwsh ./infra/assign-acr-role.ps1 -ResourceGroup $Env:AZURE_RESOURCE_GROUP -ContainerAppName $Env:AZURE_CONTAINERAPPNAME -AcrName $Env:AZURE_CONTAINERREGISTRYNAME
-        } else {
-          Write-Output "Automatic variables not found. Run the helper manually:"
-          Write-Output "pwsh ./infra/assign-acr-role.ps1 -ResourceGroup \"<resource-group>\" -ContainerAppName \"<container-app-name>\" -AcrName \"<acr-name>\""
-        }
-    posix:
-      shell: sh
-      run: |
-        echo "Post-provision hook: attempting to assign AcrPull role to container app identity..."
-        if [ -n "$AZURE_CONTAINERREGISTRYNAME" ] && [ -n "$AZURE_CONTAINERAPPNAME" ] && [ -n "$AZURE_RESOURCE_GROUP" ]; then
-          echo "Detected azd-provided environment variables. Running role assignment helper..."
-          pwsh ./infra/assign-acr-role.ps1 -ResourceGroup "$AZURE_RESOURCE_GROUP" -ContainerAppName "$AZURE_CONTAINERAPPNAME" -AcrName "$AZURE_CONTAINERREGISTRYNAME"
-        else
-          echo "Automatic variables not found. Run the helper manually:"
-          echo "pwsh ./infra/assign-acr-role.ps1 -ResourceGroup \"<resource-group>\" -ContainerAppName \"<container-app-name>\" -AcrName \"<acr-name>\""
-        fi
-
   predeploy:
     windows:
       shell: pwsh
@@ -69,8 +47,14 @@ hooks:
       run: |
         echo "Deployment completed successfully!"
         echo "Application URL: $Env:AZURE_CONTAINER_APP_URL"
+        echo "Container Registry: $Env:AZURE_CONTAINER_REGISTRY_ENDPOINT"
+        echo "Note: Initial deployment uses placeholder image for speed"
+        echo "Custom image will be updated during azd deploy phase"
     posix:
       shell: sh
       run: |
         echo "Deployment completed successfully!"
         echo "Application URL: $AZURE_CONTAINER_APP_URL"
+        echo "Container Registry: $AZURE_CONTAINER_REGISTRY_ENDPOINT"
+        echo "Note: Initial deployment uses placeholder image for speed"
+        echo "Custom image will be updated during azd deploy phase"

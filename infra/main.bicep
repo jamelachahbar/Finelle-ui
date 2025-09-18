@@ -17,7 +17,7 @@ param environmentName string = 'dev'
 param location string = 'eastus2'
 
 @description('A unique token to ensure resource names are globally unique')
-param resourceToken string = toLower(uniqueString(resourceGroup().id, projectName, environmentName))
+param resourceToken string = toLower(uniqueString(subscription().id, resourceGroup().id, location, environmentName))
 
 @description('Tags applied to all resources')
 param tags object = {
@@ -34,6 +34,20 @@ var acrName = 'acr${projectName}ui${environmentName}${resourceToken}'
 var logAnalyticsName = 'law-${projectName}-ui-${environmentName}-${resourceToken}'
 var containerEnvName = 'cae-${projectName}-ui-${environmentName}-${resourceToken}'
 var containerAppName = 'ca-${projectName}-ui-${environmentName}-${resourceToken}'
+var userManagedIdentityName = 'id-${projectName}-ui-${environmentName}-${resourceToken}'
+
+// ==========================
+// USER-ASSIGNED MANAGED IDENTITY
+// ==========================
+
+module userManagedIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.0' = {
+  name: 'userManagedIdentityDeployment'
+  params: {
+    name: userManagedIdentityName
+    location: location
+    tags: tags
+  }
+}
 
 // ==========================
 // LOG ANALYTICS WORKSPACE
@@ -130,11 +144,11 @@ module containerApp 'br/public:avm/res/app/container-app:0.11.0' = {
     environmentResourceId: containerAppsEnvironment.outputs.resourceId
     workloadProfileName: 'Consumption'
     
-    // Container configuration
+    // Container configuration - using placeholder image for fast initial deployment
     containers: [
       {
         name: 'finelle-ui'
-        image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
+        image: 'mcr.microsoft.com/k8se/quickstart:latest'
         resources: {
           cpu: '0.25'
           memory: '0.5Gi'
@@ -158,11 +172,11 @@ module containerApp 'br/public:avm/res/app/container-app:0.11.0' = {
     ingressTransport: 'http'
     ingressAllowInsecure: false
 
-    // Registry configuration using managed identity
+    // Registry configuration using user-assigned managed identity
     registries: [
       {
         server: containerRegistry.outputs.loginServer
-        identity: 'system'
+        identity: userManagedIdentity.outputs.resourceId
       }
     ]
 
@@ -180,9 +194,9 @@ module containerApp 'br/public:avm/res/app/container-app:0.11.0' = {
       }
     ]
 
-    // Enable managed identity for secure access
+    // Enable user-assigned managed identity for secure access
     managedIdentities: {
-      systemAssigned: true
+      userAssignedResourceIds: [userManagedIdentity.outputs.resourceId]
     }
   }
 }
@@ -196,33 +210,17 @@ resource acrResource 'Microsoft.ContainerRegistry/registries@2023-07-01' existin
   name: acrName
 }
 
-// Replace roleAssignment block to reference the Container App's identity via a runtime reference and ensure deployment ordering
-resource containerAppResource 'Microsoft.App/containerApps@2023-05-01' existing = {
-  name: containerAppName
-}
-
+// Role assignment for Container App to access ACR using module output
 resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(acrResource.id, containerAppName, '7f951dda-4ed3-4680-a7ca-43fe172d538d')
   scope: acrResource
-  dependsOn: [
-    containerApp
-  ]
   properties: {
-    // Use the resource reference identity principalId of the deployed Container App
-    principalId: containerAppResource.identity.principalId
+    // Use the user-assigned managed identity principal ID
+    principalId: userManagedIdentity.outputs.principalId
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull role
     principalType: 'ServicePrincipal'
   }
 }
-
-// ==========================
-// ROLE ASSIGNMENTS
-// ==========================
-
-// Grant the Container App managed identity AcrPull permissions
-// Note: This will be configured after deployment using Azure CLI or manually
-// The Container App needs AcrPull role on the Container Registry
-// Command: az role assignment create --assignee <principal-id> --role AcrPull --scope <acr-resource-id>
 
 // ==========================
 // OUTPUTS
@@ -231,8 +229,14 @@ resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 @description('The resource group name')
 output resourceGroupName string = resourceGroup().name
 
+@description('The resource group ID')
+output RESOURCE_GROUP_ID string = resourceGroup().id
+
 @description('The Container Registry login server')
 output containerRegistryLoginServer string = containerRegistry.outputs.loginServer
+
+@description('The Container Registry endpoint')
+output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.outputs.loginServer
 
 @description('The Container Registry name')
 output containerRegistryName string = containerRegistry.outputs.name
