@@ -7,13 +7,18 @@ on:
     branches: [ main ]
     types: [ closed ]
   workflow_dispatch:
+    inputs:
+      bootstrap:
+        description: 'Run initial bootstrap (first time setup)'
+        required: false
+        default: false
+        type: boolean
 
 env:
   AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
   AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-  CONTAINER_REGISTRY_LOGIN_SERVER: ${{ vars.CONTAINER_REGISTRY_LOGIN_SERVER }} # optional, will be overwritten by IaC outputs
-  RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP }}
+  AZURE_ENV_NAME: finelle-fresh
 
 permissions:
   id-token: write
@@ -28,7 +33,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Node 22 + clean npm cache + lock fix you already applied earlier
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -59,10 +63,12 @@ jobs:
       - name: Run tests
         run: npm test -- --coverage --watchAll=false
 
-      - name: Build application
-        run: npm run build
+      # Install Azure Developer CLI
+      - name: Install Azure Developer CLI
+        run: |
+          curl -fsSL https://aka.ms/install-azd.sh | bash
 
-      # ---- Azure login & RG-scope deployment (matches your Bicep) ----
+      # Azure login using OIDC
       - name: Azure Login (OIDC)
         uses: azure/login@v2
         with:
@@ -70,105 +76,74 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Ensure resource group exists
+      # Bootstrap: Initial setup for first-time deployment
+      - name: Bootstrap Azure Environment (First Time Setup)
+        if: github.event.inputs.bootstrap == 'true' || github.event_name == 'workflow_dispatch'
         run: |
-          az group create -n "${{ env.RESOURCE_GROUP }}" -l "eastus2" --only-show-errors
+          echo "🚀 Bootstrapping Azure environment..."
+          
+          # Set azd environment
+          azd env select ${{ env.AZURE_ENV_NAME }} --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }} || azd env new ${{ env.AZURE_ENV_NAME }} --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          
+          # Set required environment variables for azd
+          azd env set AZURE_LOCATION eastus2
+          azd env set AZURE_SUBSCRIPTION_ID ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          
+          # Initial provision - this creates all Azure resources
+          azd provision --no-prompt
+          
+          echo "✅ Bootstrap completed successfully!"
 
-      # (Optional) Only deploy infra when changed or on manual run
-      - name: Check for infrastructure changes
-        id: infra-changes
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            infra:
-              - 'infrastructure/**'
-
-      - name: Deploy infrastructure (resource group scope)
-        if: steps.infra-changes.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
-        id: rg-deploy
+      # Regular deployment: Use existing environment
+      - name: Select Azure Environment
+        if: github.event.inputs.bootstrap != 'true'
         run: |
-          DEPLOYMENT_NAME="finelle-ui-rg-$(date +%Y%m%d-%H%M%S)"
-          az deployment group create \
-            --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --name "$DEPLOYMENT_NAME" \
-            --template-file infrastructure/main.bicep \
-            --parameters location="eastus2" \
-            --only-show-errors
+          echo "📦 Using existing Azure environment..."
+          azd env select ${{ env.AZURE_ENV_NAME }} --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-          # Read outputs straight from the RG deployment
-          ACR_LOGIN_SERVER=$(az deployment group show \
-            --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --name "$DEPLOYMENT_NAME" \
-            --query "properties.outputs.containerRegistryLoginServer.value" -o tsv)
-
-          CONTAINER_APP_NAME=$(az deployment group show \
-            --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --name "$DEPLOYMENT_NAME" \
-            --query "properties.outputs.containerAppName.value" -o tsv)
-
-          echo "acr-login-server=$ACR_LOGIN_SERVER" >> $GITHUB_OUTPUT
-          echo "container-app-name=$CONTAINER_APP_NAME" >> $GITHUB_OUTPUT
-
-      # If infra wasn't redeployed, look up existing outputs from the RG (ACR + Container App)
-      - name: Resolve ACR & Container App when infra not redeployed
-        if: steps.infra-changes.outputs.infra != 'true' && github.event_name != 'workflow_dispatch'
-        id: resolve-existing
+      # Build with Application Insights connection string
+      - name: Build application with telemetry
         run: |
-          # Try to infer from resources in the RG (names are deterministic in your Bicep)
-          # ACR login server:
-          ACR_LOGIN_SERVER=$(az acr list -g "${{ env.RESOURCE_GROUP }}" --query "[0].loginServer" -o tsv)
-          # Container App name:
-          CONTAINER_APP_NAME=$(az containerapp list -g "${{ env.RESOURCE_GROUP }}" --query "[0].name" -o tsv)
-
-          if [ -z "$ACR_LOGIN_SERVER" ] || [ -z "$CONTAINER_APP_NAME" ]; then
-            echo "::error::ACR or Container App not found. Re-run with infra deploy or check the RG."
-            exit 1
+          echo "🏗️ Building application with Application Insights..."
+          
+          # Get Application Insights connection string from azd environment
+          CONNECTION_STRING=$(azd env get-values | grep applicationInsightsConnectionString | cut -d'=' -f2 | tr -d '"')
+          
+          if [ -n "$CONNECTION_STRING" ]; then
+            echo "✅ Application Insights connection string found"
+            echo "VITE_APPINSIGHTS_CONNECTION_STRING=$CONNECTION_STRING" > .env.production
+            echo "✅ Created .env.production file"
+          else
+            echo "⚠️ Application Insights connection string not found, proceeding without telemetry"
+          fi
+          
+          # Build the application
+          npm run build
+          
+          # Verify connection string is embedded
+          if grep -r "InstrumentationKey" dist/assets/*.js 2>/dev/null; then
+            echo "✅ Application Insights connection string embedded in build"
+          else
+            echo "⚠️ Application Insights connection string not found in build"
           fi
 
-          echo "acr-login-server=$ACR_LOGIN_SERVER" >> $GITHUB_OUTPUT
-          echo "container-app-name=$CONTAINER_APP_NAME" >> $GITHUB_OUTPUT
-
-      # Select the effective outputs (from deploy step if it ran, else from resolve-existing)
-      - name: Set effective outputs
-        id: effective
+      # Deploy using Azure Developer CLI
+      - name: Deploy to Azure
         run: |
-          echo "acr-login-server=${{ steps.rg-deploy.outputs.acr-login-server || steps.resolve-existing.outputs.acr-login-server }}" >> $GITHUB_OUTPUT
-          echo "container-app-name=${{ steps.rg-deploy.outputs.container-app-name || steps.resolve-existing.outputs.container-app-name }}" >> $GITHUB_OUTPUT
-
-      # ---- Build & push using the ACR created by Bicep ----
-      - name: Build and push Docker image
-        run: |
-          REGISTRY_LOGIN_SERVER="${{ steps.effective.outputs.acr-login-server }}"
-          REGISTRY_NAME="$(echo "$REGISTRY_LOGIN_SERVER" | cut -d. -f1)"
-
-          az acr login --name "$REGISTRY_NAME"
-
-          docker build -t "$REGISTRY_LOGIN_SERVER/finelle-ui:${{ github.sha }}" .
-          docker tag   "$REGISTRY_LOGIN_SERVER/finelle-ui:${{ github.sha }}" "$REGISTRY_LOGIN_SERVER/finelle-ui:latest"
-
-          docker push  "$REGISTRY_LOGIN_SERVER/finelle-ui:${{ github.sha }}"
-          docker push  "$REGISTRY_LOGIN_SERVER/finelle-ui:latest"
-
-      - name: Update Container App
-        run: |
-          az containerapp update \
-            --name "${{ steps.effective.outputs.container-app-name }}" \
-            --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --image "${{ steps.effective.outputs.acr-login-server }}/finelle-ui:${{ github.sha }}" \
-            --only-show-errors
-
-      - name: Get application URL
-        id: get-url
-        run: |
-          APP_URL=$(az containerapp show \
-            --name "${{ steps.effective.outputs.container-app-name }}" \
-            --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --query "properties.configuration.ingress.fqdn" -o tsv)
-          echo "app-url=https://$APP_URL" >> $GITHUB_OUTPUT
+          echo "🚀 Deploying to Azure Container Apps..."
+          azd deploy --no-prompt
+          
+          # Get the application URL
+          APP_URL=$(azd show --output json | jq -r '.services.ui.project.endpoints[0]')
+          echo "app_url=$APP_URL" >> $GITHUB_OUTPUT
+          
           echo "### 🚀 Deployment Successful!" >> $GITHUB_STEP_SUMMARY
-          echo "Application URL: https://$APP_URL" >> $GITHUB_STEP_SUMMARY
+          echo "Application URL: $APP_URL" >> $GITHUB_STEP_SUMMARY
+          echo "Telemetry: Application Insights enabled" >> $GITHUB_STEP_SUMMARY
 
       - name: Deployment Summary
         run: |
-          echo "::notice::Application URL: ${{ steps.get-url.outputs.app-url }}"
-          echo "::notice::Container Image: ${{ steps.effective.outputs.acr-login-server }}/finelle-ui:${{ github.sha }}"
+          APP_URL=$(azd show --output json | jq -r '.services.ui.project.endpoints[0]')
+          echo "::notice::Application URL: $APP_URL"
+          echo "::notice::Environment: ${{ env.AZURE_ENV_NAME }}"
+          echo "::notice::Deployment completed successfully!"
