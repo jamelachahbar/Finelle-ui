@@ -49,9 +49,45 @@ This project uses an **optimized deployment strategy** with placeholder images f
 
 ## 🤖 GitHub Actions CI/CD
 
-Automate your deployments with GitHub Actions! Use our bootstrap scripts for one-time setup.
+Automate your deployments with GitHub Actions! Choose from three setup approaches.
 
-### 🚀 Automated Bootstrap (Recommended)
+### 🎯 Azure Developer CLI Pipeline Setup (Recommended)
+
+The easiest way to set up GitHub Actions with OIDC authentication and federated credentials:
+
+```bash
+# Configure GitHub pipeline with azd
+azd pipeline config
+```
+
+**What this command does**:
+1. **Creates GitHub workflow**: Generates `.github/workflows/azure-dev.yml`
+2. **Sets up OIDC authentication**: Creates federated credentials (no stored secrets!)
+3. **Creates Managed Identity**: Provisions `msi-<project-name>` with proper permissions
+4. **Configures GitHub variables**:
+   - `AZURE_CLIENT_ID` - Managed identity client ID
+   - `AZURE_TENANT_ID` - Your Azure tenant ID
+   - `AZURE_SUBSCRIPTION_ID` - Target subscription
+   - `AZURE_LOCATION` - Deployment region
+   - `AZURE_ENV_NAME` - Environment name
+
+**Step-by-step process**:
+1. You'll be prompted to authenticate with GitHub CLI
+2. Choose **"Federated User Managed Identity (MSI + OIDC)"** for secure authentication
+3. Select **"Create new User Managed Identity"** or use existing
+4. Pick your preferred Azure region and resource group
+5. AZD automatically configures all GitHub repository variables
+
+**Benefits**:
+- ✅ **No secrets stored** - uses OIDC federated credentials
+- ✅ **Automatic setup** - configures everything in one command
+- ✅ **Enterprise security** - follows Microsoft best practices
+- ✅ **Fast deployment** - includes image upsert optimization
+- ✅ **Production ready** - includes error handling and monitoring
+
+### 🚀 Alternative: Automated Bootstrap Scripts
+
+For more control or custom configurations:
 
 **PowerShell (Windows)**:
 ```powershell

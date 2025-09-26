@@ -124,6 +124,25 @@ module containerRegistry 'br/public:avm/res/container-registry/registry:0.7.0' =
     ]
   }
 }
+// ==========================
+// ROLE ASSIGNMENT FOR ACR ACCESS
+// ==========================
+
+// Create the role assignment as a child resource extension
+resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(resourceGroup().id, acrName, userManagedIdentityName, 'AcrPull')
+  scope: resourceGroup()
+  properties: {
+    principalId: userManagedIdentity.outputs.principalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull role
+    principalType: 'ServicePrincipal'
+  }
+  dependsOn: [
+    containerRegistry
+  ]
+}
+
+
 
 // ==========================
 // CONTAINER APPS ENVIRONMENT
@@ -150,7 +169,7 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.8.0
 }
 
 // ==========================
-// CONTAINER APP (React Frontend)
+// CONTAINER APP UPSERT (React Frontend)
 // ==========================
 
 module containerApp 'br/public:avm/res/app/container-app:0.11.0' = {
@@ -168,10 +187,10 @@ module containerApp 'br/public:avm/res/app/container-app:0.11.0' = {
     containers: [
       {
         name: 'finelle-ui'
-        image: 'mcr.microsoft.com/k8se/quickstart:latest'
+        image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
         resources: {
-          cpu: '0.25'
-          memory: '0.5Gi'
+          cpu: '0.5'
+          memory: '1.0Gi'
         }
         env: [
           {
@@ -194,6 +213,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.11.0' = {
       }
     ]
 
+
     // Ingress configuration for web access
     ingressExternal: true
     ingressTargetPort: 80
@@ -207,6 +227,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.11.0' = {
         identity: userManagedIdentity.outputs.resourceId
       }
     ]
+
 
     // Scaling configuration
     scaleMinReplicas: 1
@@ -229,26 +250,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.11.0' = {
   }
 }
 
-// ==========================
-// ROLE ASSIGNMENT FOR ACR ACCESS
-// ==========================
 
-// Reference the ACR resource for role assignment
-resource acrResource 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
-  name: acrName
-}
-
-// Role assignment for Container App to access ACR using module output
-resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(acrResource.id, containerAppName, '7f951dda-4ed3-4680-a7ca-43fe172d538d')
-  scope: acrResource
-  properties: {
-    // Use the user-assigned managed identity principal ID
-    principalId: userManagedIdentity.outputs.principalId
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull role
-    principalType: 'ServicePrincipal'
-  }
-}
 
 // ==========================
 // OUTPUTS
