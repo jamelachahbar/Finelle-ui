@@ -1,24 +1,55 @@
-# Finelle UI - React Application
+# Finelle UI - AI-Powered Chat Interface
 
-A modern React application with TypeScript and Vite, optimized for deployment on Azure Container Apps with fast provisioning and comprehensive monitoring.
+A sophisticated React application with TypeScript, Vite, and Microsoft Fluent UI, featuring AI-powered chat capabilitie### 🔄 Workflow Features
+
+- **Automatic builds** on every push to main branch
+- **OIDC Authentication** - No stored secrets, uses federated credentials
+- **Image Upsert Optimization** - Fast deployments with placeholder images
+- **Application Insights Integration** - Automatic telemetry configuration
+- **Performance Tracking** - Deployment timing in workflow logs
+- **Node.js 18** setup with npm caching for faster buildsAzure integration. Optimized for deployment on Azure Container Apps with fast provisioning (~2-3 minutes) and comprehensive Application Insights monitoring.
+
+## ✨ Features
+
+- **🤖 AI Chat Interface**: Interactive chat with multiple AI agents
+- **📊 Data Visualization**: Chart display components for data insights  
+- **🎨 Modern UI**: Microsoft Fluent UI components with light theme
+- **📱 Responsive Design**: Mobile-friendly navigation and layouts
+- **🔍 Citation Handling**: Smart citation processing and display
+- **📈 Real-time Telemetry**: Application Insights integration
+- **⚡ Fast Deployment**: Image upsert technique for rapid provisioning
+- **🔄 Auto-scaling**: Azure Container Apps with HTTP-based scaling
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 - **Node.js 18+**: For local development
-- **Azure Developer CLI (azd)**: For deployment
+- **Azure Developer CLI (azd)**: For deployment (`winget install microsoft.azd`)
 - **Docker**: For containerization (optional for local dev)
+- **Azure Subscription**: For cloud deployment
 
 ### Local Development
 ```bash
 # Install dependencies
 npm install
 
-# Start development server
+# Start development server (with hot reload)
 npm run dev
 
 # Build for production
 npm run build
+
+# Preview production build
+npm run preview
+
+# Run linting
+npm run lint
+```
+
+### Environment Setup
+Create a `.env.production` file for Application Insights:
+```bash
+VITE_APPINSIGHTS_CONNECTION_STRING=your-connection-string-here
 ```
 
 ## ☁️ Azure Deployment
@@ -85,32 +116,59 @@ azd pipeline config
 - ✅ **Fast deployment** - includes image upsert optimization
 - ✅ **Production ready** - includes error handling and monitoring
 
-### 🚀 Alternative: Automated Bootstrap Scripts
+### �️ Alternative: Manual Setup
 
-For more control or custom configurations:
+If you prefer manual configuration or need custom settings:
 
-**PowerShell (Windows)**:
-```powershell
-.\bootstrap-github-actions.ps1
-```
+1. **Create User-Assigned Managed Identity** in Azure Portal
+2. **Set up Federated Credentials** for your GitHub repository
+3. **Configure GitHub Variables** manually:
+   ```bash
+   gh variable set AZURE_CLIENT_ID --body "your-client-id"
+   gh variable set AZURE_TENANT_ID --body "your-tenant-id"
+   gh variable set AZURE_SUBSCRIPTION_ID --body "your-subscription-id"
+   gh variable set AZURE_LOCATION --body "your-region"
+   gh variable set AZURE_ENV_NAME --body "your-env-name"
+   ```
+4. **Create workflow file** at `.github/workflows/azure-dev.yml`
 
-**Bash (Linux/macOS)**:
+### � Pipeline Configuration Troubleshooting
+
+**Common issues with `azd pipeline config`**:
+
 ```bash
-chmod +x bootstrap-github-actions.sh
-./bootstrap-github-actions.sh
+# Issue: GitHub CLI not authenticated
+azd pipeline config
+# Solution: Follow the GitHub authentication prompts
+
+# Issue: Missing GitHub variables
+gh variable list
+# Solution: Manually set missing variables:
+gh variable set AZURE_LOCATION --body "eastus2"
+gh variable set AZURE_SUBSCRIPTION_ID --body "your-subscription-id"
+
+# Issue: Workflow fails with authentication errors
+# Solution: Check federated credentials in Azure Portal:
+# Azure AD > App registrations > msi-<project-name> > Certificates & secrets > Federated credentials
+
+# Issue: Pipeline timeout or resource conflicts
+# Solution: Clean up failed deployments:
+azd down --purge --force
 ```
 
-The bootstrap script automatically:
-- ✅ Creates Azure Service Principal
-- ✅ Sets up GitHub repository secrets
-- ✅ Triggers initial deployment workflow
-- ✅ Configures Application Insights integration
+**Verify your setup**:
+```bash
+# Check GitHub variables are set
+gh variable list
 
-### 🛠️ Manual Setup
+# Test the workflow manually
+gh workflow run azure-dev.yml
 
-If you prefer manual setup, see [GITHUB-ACTIONS-BOOTSTRAP.md](./GITHUB-ACTIONS-BOOTSTRAP.md) for detailed instructions.
+# Check workflow status
+gh run list --workflow=azure-dev.yml
+```
 
-### 🔄 Workflow Features
+### �🔄 Workflow Features
 
 - **Automatic builds** on every push to main
 - **Infrastructure provisioning** with first-time bootstrap
@@ -119,23 +177,35 @@ If you prefer manual setup, see [GITHUB-ACTIONS-BOOTSTRAP.md](./GITHUB-ACTIONS-B
 - **Security** with Azure OIDC authentication
 
 ### 📊 Deployment Performance
-- **Infrastructure Provisioning**: ~1 min 46 sec
-- **Application Deployment**: ~29 seconds  
-- **Total Time**: ~2 min 15 sec (85% faster than traditional approach)
+- **Infrastructure Provisioning**: ~1-2 minutes (with placeholder image)
+- **Application Build**: ~30-45 seconds (React + Docker)
+- **Container Update**: ~15 seconds (image upsert)
+- **Total Time**: ~2-3 minutes (70-80% faster than traditional approach)
+
+### 📁 Key Configuration Files
+- **`azure.yaml`** - Azure Developer CLI configuration with image upsert strategy
+- **`infra/main.bicep`** - Infrastructure as Code using Azure Verified Modules
+- **`.github/workflows/azure-dev.yml`** - GitHub Actions CI/CD pipeline
+- **`Dockerfile`** - Multi-stage container build with nginx
+- **`package.json`** - Dependencies and build scripts
+- **`.env.production`** - Application Insights connection string
 
 ## 🏗️ Architecture
 
-### Azure Resources Created:
-- **Container App**: Hosts the React application
-- **Container Registry**: Stores Docker images securely
-- **Application Insights**: Monitors performance and errors
-- **Log Analytics**: Centralized logging
-- **Container Apps Environment**: Serverless container platform
-- **Managed Identity**: Secure resource access
+### Azure Resources Created
+- **Container App**: Hosts the React application with auto-scaling
+- **Container Registry**: Stores Docker images securely with managed identity access
+- **Application Insights**: Real-time performance monitoring and error tracking
+- **Log Analytics Workspace**: Centralized logging and metrics
+- **Container Apps Environment**: Serverless container platform with consumption pricing
+- **User-Assigned Managed Identity**: Secure, passwordless resource access
 
-### 🔄 Deployment Strategy:
-1. **Phase 1 (Provision)**: Fast infrastructure setup with placeholder image
-2. **Phase 2 (Deploy)**: Quick swap to custom React application
+### 🔄 Image Upsert Deployment Strategy
+1. **Phase 1 (Provision)**: Infrastructure deploys with lightweight placeholder image (`mcr.microsoft.com/k8se/quickstart:latest`)
+2. **Phase 2 (Build)**: Custom React application builds in parallel
+3. **Phase 3 (Deploy)**: Seamless container update to production application
+
+**Performance**: ~2-3 minutes total (vs 8-10+ minutes traditional approach)
 
 ## 📈 Monitoring & Observability
 
@@ -160,12 +230,43 @@ If you prefer manual setup, see [GITHUB-ACTIONS-BOOTSTRAP.md](./GITHUB-ACTIONS-B
 
 ### Tech Stack
 
-- **Frontend**: React 18 + TypeScript + Vite
-- **Styling**: CSS Modules / Styled Components
-- **State Management**: React Hooks / Context API
-- **Build Tool**: Vite (Fast HMR and optimized builds)
-- **Container**: Multi-stage Docker build
-- **Infrastructure**: Azure Bicep + Azure Verified Modules
+**Frontend Framework**:
+- **React 18** + **TypeScript** + **Vite 6** - Modern development stack
+- **Microsoft Fluent UI** - Professional UI components and theming
+- **React Router DOM** - Client-side routing and navigation
+
+**Core Dependencies**:
+- **Application Insights** - Real-time telemetry and monitoring
+- **Axios** - HTTP client for API communication
+- **React Markdown** - Markdown rendering with syntax highlighting
+- **Lodash** - Utility functions for data manipulation
+
+**Development Tools**:
+- **ESLint 9** - Code quality and consistency
+- **TypeScript 5.7** - Type safety and developer experience
+- **Vite HMR** - Fast hot module replacement
+
+**Infrastructure**:
+- **Azure Bicep** - Infrastructure as Code
+- **Azure Verified Modules** - Enterprise-grade resource templates
+- **Docker** - Multi-stage containerization
+- **Azure Container Apps** - Serverless container hosting
+
+### Project Structure
+```
+src/
+├── api/           # API integration (finelleApi.ts)
+├── components/    # Reusable UI components
+│   ├── ChatWindow/     # Chat interface components
+│   ├── ChartDisplay/   # Data visualization
+│   ├── CitationHandler/# Citation processing
+│   └── NavBar/         # Navigation component
+├── pages/         # Route components (Chat, HomePage)
+├── hooks/         # Custom React hooks (useAgentChat)
+├── utils/         # Utility functions (citationUtils)
+├── constants/     # Configuration (agents.ts)
+└── assets/        # Static assets
+```
 
 ### ESLint Configuration
 
@@ -273,13 +374,23 @@ azd provision --force
 azd down --force --purge
 ```
 
-## 📚 Additional Resources
+## 📚 Documentation & Resources
 
+### Project Documentation
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Complete Azure deployment guide with troubleshooting
+- **[QUICK-START.md](./QUICK-START.md)** - Get started in 5 minutes
+- **[VSCODE-DEPLOYMENT-GUIDE.md](./VSCODE-DEPLOYMENT-GUIDE.md)** - VS Code integration and debugging
+
+### Azure Resources
 - [Azure Container Apps Documentation](https://docs.microsoft.com/en-us/azure/container-apps/)
 - [Azure Developer CLI Documentation](https://docs.microsoft.com/en-us/azure/developer/azure-developer-cli/)
-- [Deployment Guide](./DEPLOYMENT.md) - Detailed deployment instructions
-- [VS Code Deployment Guide](./VSCODE-DEPLOYMENT-GUIDE.md) - IDE integration
-- [Quick Start Guide](./QUICK-START.md) - Get started in 5 minutes
+- [Azure Verified Modules](https://azure.github.io/Azure-Verified-Modules/)
+- [Application Insights for React](https://docs.microsoft.com/en-us/azure/azure-monitor/app/javascript-react-plugin)
+
+### Development Resources
+- [Microsoft Fluent UI Documentation](https://react.fluentui.dev/)
+- [Vite Documentation](https://vitejs.dev/)
+- [React 18 Documentation](https://react.dev/)
 
 ## 🤝 Contributing
 
