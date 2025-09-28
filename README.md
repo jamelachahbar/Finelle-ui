@@ -1,13 +1,6 @@
 # Finelle UI - AI-Powered Chat Interface
 
-A sophisticated React application with TypeScript, Vite, and Microsoft Fluent UI, featuring AI-powered chat capabilitie### 🔄 Workflow Features
-
-- **Automatic builds** on every push to main branch
-- **OIDC Authentication** - No stored secrets, uses federated credentials
-- **Image Upsert Optimization** - Fast deployments with placeholder images
-- **Application Insights Integration** - Automatic telemetry configuration
-- **Performance Tracking** - Deployment timing in workflow logs
-- **Node.js 18** setup with npm caching for faster buildsAzure integration. Optimized for deployment on Azure Container Apps with fast provisioning (~2-3 minutes) and comprehensive Application Insights monitoring.
+A sophisticated React application with TypeScript, Vite, and Microsoft Fluent UI, featuring AI-powered chat capabilities and comprehensive Azure integration. Optimized for deployment on Azure Container Apps with fast provisioning (~2-3 minutes) and comprehensive Application Insights monitoring.
 
 ## ✨ Features
 
@@ -20,15 +13,69 @@ A sophisticated React application with TypeScript, Vite, and Microsoft Fluent UI
 - **⚡ Fast Deployment**: Image upsert technique for rapid provisioning
 - **🔄 Auto-scaling**: Azure Container Apps with HTTP-based scaling
 
+![](image.png)
+![alt text](image-1.png)
+![alt text](image-2.png)
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - **Node.js 18+**: For local development
 - **Azure Developer CLI (azd)**: For deployment (`winget install microsoft.azd`)
 - **Docker**: For containerization (optional for local dev)
 - **Azure Subscription**: For cloud deployment
 
+### 1️⃣ First Time Deployment
+
+**IMPORTANT: Start Docker Desktop first!**
+
+Open VS Code terminal (`Ctrl+` backtick) and run:
+
+```powershell
+# 1. Start Docker/Rancher Desktop (if not running)
+# For Docker Desktop:
+Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+
+# Wait 2-3 minutes for Docker daemon to fully initialize
+# Test with: docker version
+
+# 2. Authenticate with Azure
+azd auth login
+
+# 3. Initialize project (if not done)
+azd init
+
+# 4. Deploy everything
+azd up
+```
+
+**Follow prompts:**
+- Environment name: `finelle-dev`
+- Subscription: [Select yours]
+- Location: `East US 2`
+
+### 2️⃣ Using VS Code Tasks (Easier!)
+
+Press `Ctrl+Shift+P` then type:
+```
+Tasks: Run Task
+```
+Select: `Azure: Deploy to Container Apps`
+
+### 3️⃣ Code-Only Updates (Fast!)
+
+```powershell
+# Deploy code changes only
+azd deploy
+```
+
+Or use VS Code task:
+```
+Ctrl+Shift+P → Tasks: Run Task → Azure: Deploy Application Only
+```
+
 ### Local Development
+
 ```bash
 # Install dependencies
 npm install
@@ -47,7 +94,9 @@ npm run lint
 ```
 
 ### Environment Setup
+
 Create a `.env.production` file for Application Insights:
+
 ```bash
 VITE_APPINSIGHTS_CONNECTION_STRING=your-connection-string-here
 ```
@@ -77,6 +126,40 @@ This project uses an **optimized deployment strategy** with placeholder images f
    # Update infrastructure if needed
    azd provision
    ```
+
+## 💻 VS Code Deployment (Recommended for Development)
+
+### Install Required VS Code Extensions
+
+Open VS Code Extensions panel (`Ctrl+Shift+X`) and install:
+
+1. **Azure Developer CLI** (Microsoft)
+2. **Azure Account** (Microsoft)
+3. **Azure Resources** (Microsoft)
+4. **Azure Container Apps** (Microsoft)
+5. **Bicep** (Microsoft)
+6. **Docker** (Microsoft)
+
+### Deploy Using VS Code Tasks
+
+**Method A: Using Command Palette**
+1. Press `Ctrl+Shift+P`
+2. Type: `Tasks: Run Task`
+3. Select: `Azure: Deploy to Container Apps`
+
+**Method B: Using Built-in Tasks**
+- `Azure: Deploy to Container Apps` - Full deployment
+- `Azure: Deploy Application Only` - Code updates only
+- `Azure: Provision Infrastructure Only` - Infrastructure only
+- `Build: React Application` - Local build test
+- `Azure: View Logs` - Stream logs
+
+### Daily Development Workflow
+
+1. **Make changes** in VS Code
+2. **Test locally**: `npm run dev`
+3. **Deploy**: `Ctrl+Shift+P` → `Tasks: Run Task` → `Azure: Deploy Application Only`
+4. **Check app**: Visit your application URL
 
 ## 🤖 GitHub Actions CI/CD
 
@@ -188,7 +271,7 @@ gh run list --workflow=azure-dev.yml
 - **`.github/workflows/azure-dev.yml`** - GitHub Actions CI/CD pipeline
 - **`Dockerfile`** - Multi-stage container build with nginx
 - **`package.json`** - Dependencies and build scripts
-- **`.env.production`** - Application Insights connection string
+- **`.env.example`** - Key environment variables file
 
 ## 🏗️ Architecture
 
@@ -201,11 +284,11 @@ gh run list --workflow=azure-dev.yml
 - **User-Assigned Managed Identity**: Secure, passwordless resource access
 
 ### 🔄 Image Upsert Deployment Strategy
-1. **Phase 1 (Provision)**: Infrastructure deploys with lightweight placeholder image (`mcr.microsoft.com/k8se/quickstart:latest`)
+1. **Phase 1 (Provision)**: Infrastructure deploys with lightweight placeholder image (`mcr.microsoft.com/azuredocs/containerapps-helloworld:latest`)
 2. **Phase 2 (Build)**: Custom React application builds in parallel
 3. **Phase 3 (Deploy)**: Seamless container update to production application
 
-**Performance**: ~2-3 minutes total (vs 8-10+ minutes traditional approach)
+**Performance**: ~3-7 minutes total
 
 ## 📈 Monitoring & Observability
 
@@ -289,9 +372,22 @@ export default tseslint.config({
 
 ## 🔧 Troubleshooting
 
-### Common Deployment Issues
+### Common Issues and Solutions
 
-#### 1. **Container App Won't Start**
+#### 1. **Docker not running**
+
+```powershell
+# If using Docker Desktop:
+Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+
+# If using Rancher Desktop:
+Start-Process "C:\Program Files\Rancher Desktop\Rancher Desktop.exe"
+
+# Wait 2-3 minutes, then check:
+docker version
+```
+
+#### 2. **Container App Won't Start**
 
 ```bash
 # Check container logs
@@ -301,37 +397,17 @@ az containerapp logs show --name <app-name> --resource-group <rg-name>
 az containerapp revision list --name <app-name> --resource-group <rg-name>
 ```
 
-#### 2. **Subscription Context Issues**
+#### 3. **Authentication Issues**
 
-```bash
-# Verify correct subscription
-az account show --query "{Name:name, SubscriptionId:id}"
+```powershell
+# Re-authenticate Azure CLI
+az login
 
-# Set correct subscription if needed
-az account set --subscription <subscription-id>
+# Re-authenticate Azure Developer CLI
+azd auth login
 ```
 
-#### 3. **ACR Authentication Errors**
-
-```bash
-# Verify managed identity role assignment
-az role assignment list --assignee <identity-principal-id> --scope <acr-resource-id>
-
-# Check container app managed identity
-az containerapp show --name <app-name> --resource-group <rg-name> --query "identity"
-```
-
-#### 4. **Deployment Stuck in Progress**
-
-```bash
-# Check provisioning status
-azd provision --preview
-
-# Apply pending changes
-azd provision
-```
-
-#### 5. **Build Failures**
+#### 4. **Build Failures**
 
 ```bash
 # Clear npm cache
@@ -343,6 +419,29 @@ npm install
 
 # Check Docker build locally
 docker build -t finelle-ui:test .
+```
+
+#### 5. **ACR Authentication Errors**
+
+```bash
+# Verify managed identity role assignment
+az role assignment list --assignee <identity-principal-id> --scope <acr-resource-id>
+
+# Check container app managed identity
+az containerapp show --name <app-name> --resource-group <rg-name> --query "identity"
+```
+
+#### 6. **Deployment Stuck in Progress**
+
+```bash
+# Check provisioning status
+azd provision --preview
+
+# Apply pending changes
+azd provision
+
+# Force refresh infrastructure
+azd provision --force
 ```
 
 ### Performance Optimization Tips
@@ -374,12 +473,7 @@ azd provision --force
 azd down --force --purge
 ```
 
-## 📚 Documentation & Resources
-
-### Project Documentation
-- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Complete Azure deployment guide with troubleshooting
-- **[QUICK-START.md](./QUICK-START.md)** - Get started in 5 minutes
-- **[VSCODE-DEPLOYMENT-GUIDE.md](./VSCODE-DEPLOYMENT-GUIDE.md)** - VS Code integration and debugging
+## 📚 Additional Resources
 
 ### Azure Resources
 - [Azure Container Apps Documentation](https://docs.microsoft.com/en-us/azure/container-apps/)
@@ -392,13 +486,26 @@ azd down --force --purge
 - [Vite Documentation](https://vitejs.dev/)
 - [React 18 Documentation](https://react.dev/)
 
+## 🚀 Quick Commands Reference
+
+| What you want to do | Command | VS Code Task |
+|---------------------|---------|-------------|
+| First deploy | `azd up` | `Azure: Deploy to Container Apps` |
+| Update code | `azd deploy` | `Azure: Deploy Application Only` |
+| Infrastructure only | `azd provision` | `Azure: Provision Infrastructure Only` |
+| View logs | `azd monitor --logs` | `Azure: View Logs` |
+| Check status | `azd show` | - |
+| Build locally | `npm run build` | `Build: React Application` |
+| Local dev server | `npm run dev` | - |
+| Stream live logs | `az containerapp logs tail --name <app> --resource-group <rg> --follow` | - |
+
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test deployment with `azd up`
-5. Submit a pull request
+1. **Fork the repository**
+2. **Create a feature branch**
+3. **Make your changes**
+4. **Test deployment** with `azd up`
+5. **Submit a pull request**
 
 ## 📄 License
 
@@ -406,4 +513,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Live Application**: Deployed on Azure Container Apps with 99.9% uptime SLA and global distribution.
+**🎯 Ready to deploy?** Start with the Quick Start section above!
+
+**Live Application**: Deployed on Azure Container Apps with 99.9% uptime SLA, auto-scaling, and global distribution.
