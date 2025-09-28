@@ -26,13 +26,6 @@ services:
       path: ./Dockerfile
       context: .
       registry: ${AZURE_CONTAINER_REGISTRY_ENDPOINT}
-    # Use delay deployment strategy with placeholder image
-    config:
-      containerApp:
-        template:
-          containers:
-            - name: finelle-ui
-              image: mcr.microsoft.com/k8se/quickstart:latest
 # Hooks for deployment lifecycle
 hooks:
   predeploy:
@@ -40,29 +33,41 @@ hooks:
       shell: pwsh
       run: |
         echo "Starting pre-deployment checks..."
-        echo "Using connection string from .env.production file..."
         
-        # Check if .env.production exists
-        if (Test-Path ".env.production") {
-          echo "✅ Found .env.production file"
-          Get-Content ".env.production" | Write-Host
-          
-          # Load the connection string from .env.production
-          $content = Get-Content ".env.production" -Raw
-          if ($content -match "VITE_APPINSIGHTS_CONNECTION_STRING=(.+)") {
-            $connectionString = $matches[1].Trim()
-            echo "✅ Connection string loaded from .env.production"
-            echo "Connection string length: $($connectionString.Length)"
-            echo "Connection string preview: $($connectionString.Substring(0, 50))..."
-            
-            # Set runtime environment variable
-            $env:VITE_APPINSIGHTS_CONNECTION_STRING = $connectionString
-          } else {
-            echo "❌ No connection string found in .env.production"
-          }
+        # Get current azd environment name
+        $envName = azd env get-value AZURE_ENV_NAME
+        if ([string]::IsNullOrEmpty($envName)) {
+          $envName = "production"
+          echo "⚠️  No AZURE_ENV_NAME found, defaulting to 'production'"
+        }
+        
+        $envFile = ".env.$envName"
+        echo "Creating $envFile with current Application Insights connection string..."
+        
+        # Get connection string from azd environment
+        $connectionString = azd env get-value applicationInsightsConnectionString
+        if ([string]::IsNullOrEmpty($connectionString)) {
+          echo "❌ No connection string found in azd environment"
+          echo "Please ensure Application Insights is deployed and azd environment is current"
+          exit 1
+        }
+        
+        # Create environment-specific .env file
+        "VITE_APPINSIGHTS_CONNECTION_STRING=$connectionString" | Out-File -FilePath $envFile -Encoding utf8
+        echo "✅ Created $envFile with current connection string"
+        echo "Connection string length: $($connectionString.Length)"
+        echo "Connection string preview: $($connectionString.Substring(0, 50))..."
+        
+        # Also create .env.production for Vite build process (always needed for production builds)
+        "VITE_APPINSIGHTS_CONNECTION_STRING=$connectionString" | Out-File -FilePath ".env.production" -Encoding utf8
+        echo "✅ Also created .env.production for Vite build process"
+        
+        # Verify files were created
+        if (Test-Path $envFile) {
+          echo "✅ $envFile file verified"
+          Get-Content $envFile | Write-Host
         } else {
-          echo "❌ No .env.production file found"
-          echo "Please ensure .env.production exists with VITE_APPINSIGHTS_CONNECTION_STRING"
+          echo "❌ Failed to create $envFile file"
           exit 1
         }
         
@@ -132,7 +137,7 @@ hooks:
         echo "🚀 Image Upsert Technique Results:"
         echo "  • Fast infrastructure provisioning (~1-2 minutes)"
         echo "  • Quick custom image deployment (~30-45 seconds)"
-        echo "  • Total deployment time: ~2-3 minutes (vs 8-10+ minutes traditional)"
+        echo "  • Total deployment time: ~4-8 minutes"
         echo ""
         echo "Test your application: $Env:AZURE_CONTAINER_APP_URL"
     posix:

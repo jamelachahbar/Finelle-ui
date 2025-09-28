@@ -53,10 +53,10 @@ jobs:
             --tenant-id "$Env:AZURE_TENANT_ID"
         shell: pwsh
 
-      - name: Deploy with Image Upsert Technique
+      - name: Deploy 
         run: |
-          echo "🚀 Starting deployment with image upsert technique..."
-          echo "Expected deployment time: ~2-3 minutes (vs 8-10+ minutes traditional)"
+          echo "🚀 Starting deployment ..."
+          echo "Expected deployment time: ~4-8 minutes"
           
           $startTime = Get-Date
           azd up --no-prompt
@@ -66,6 +66,5 @@ jobs:
           echo ""
           echo "🎉 Deployment completed!"
           echo "⏱️ Total deployment time: $($duration.TotalMinutes.ToString('F1')) minutes"
-          echo "🚀 Image upsert technique performance confirmed!"
         shell: pwsh
         

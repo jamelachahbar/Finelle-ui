@@ -48,7 +48,7 @@ const appInsights = new ApplicationInsights({
 });
 
 // Initialize the Application Insights SDK
-if (connectionString) {
+if (connectionString && connectionString.trim() !== '') {
   appInsights.loadAppInsights();
   
   // Track initial page view
@@ -60,67 +60,86 @@ if (connectionString) {
   console.log('✅ Application Insights initialized successfully');
   console.log('🔗 Connection String Preview:', connectionString.substring(0, 50) + '...');
 } else {
-  console.error('❌ Application Insights connection string not found. Telemetry will not be sent.');
+  console.warn('⚠️ Application Insights connection string not found. Running in development mode without telemetry.');
   console.log('🔍 Available environment variables:', Object.keys(import.meta.env));
+  console.log('💡 Tip: Use .env.finldev for development or deploy to Azure for production telemetry');
 }
 
 // Helper functions for custom telemetry
 export const trackEvent = (name: string, properties?: Record<string, string>, measurements?: Record<string, number>) => {
   console.log(`🔥 Tracking Event: ${name}`, properties);
-  if (appInsights.appInsights) {
+  if (appInsights.appInsights && connectionString) {
     appInsights.trackEvent({ name, properties, measurements });
     appInsights.flush(); // Force immediate send
     console.log('✅ Event sent and flushed');
   } else {
-    console.error('❌ AppInsights not initialized');
+    console.log('⚠️ AppInsights not initialized - event logged locally only');
   }
 };
 
 export const trackException = (exception: Error, properties?: Record<string, string>) => {
-  if (appInsights.appInsights) {
+  console.log(`⚠️ Tracking Exception: ${exception.message}`, properties);
+  if (appInsights.appInsights && connectionString) {
     appInsights.trackException({ exception, properties });
     appInsights.flush();
+    console.log('✅ Exception sent and flushed');
+  } else {
+    console.log('⚠️ AppInsights not initialized - exception logged locally only');
   }
 };
 
 export const trackTrace = (message: string, severityLevel?: number, properties?: Record<string, string>) => {
   console.log(`📋 Tracking Trace: ${message}`, properties);
-  if (appInsights.appInsights) {
+  if (appInsights.appInsights && connectionString) {
     appInsights.trackTrace({ message, severityLevel, properties });
     appInsights.flush();
     console.log('✅ Trace sent and flushed');
+  } else {
+    console.log('⚠️ AppInsights not initialized - trace logged locally only');
   }
 };
 
 export const trackMetric = (name: string, average: number, properties?: Record<string, string>) => {
-  if (appInsights.appInsights) {
+  console.log(`📊 Tracking Metric: ${name} = ${average}`, properties);
+  if (appInsights.appInsights && connectionString) {
     appInsights.trackMetric({ name, average, properties });
     appInsights.flush();
+    console.log('✅ Metric sent and flushed');
+  } else {
+    console.log('⚠️ AppInsights not initialized - metric logged locally only');
   }
 };
 
 export const trackPageView = (name?: string, uri?: string, properties?: Record<string, string>) => {
   console.log(`📄 Tracking Page View: ${name}`, { uri, properties });
-  if (appInsights.appInsights) {
+  if (appInsights.appInsights && connectionString) {
     appInsights.trackPageView({ name, uri, properties });
     appInsights.flush();
     console.log('✅ Page view sent and flushed');
   } else {
-    console.error('❌ AppInsights not initialized for page view');
+    console.log('⚠️ AppInsights not initialized - page view logged locally only');
   }
 };
 
 // Set user context
 export const setUserContext = (userId: string, accountId?: string) => {
-  if (appInsights.appInsights) {
+  console.log(`👤 Setting User Context: ${userId}`, { accountId });
+  if (appInsights.appInsights && connectionString) {
     appInsights.setAuthenticatedUserContext(userId, accountId);
+    console.log('✅ User context set');
+  } else {
+    console.log('⚠️ AppInsights not initialized - user context logged locally only');
   }
 };
 
 // Clear user context
 export const clearUserContext = () => {
-  if (appInsights.appInsights) {
+  console.log('👤 Clearing User Context');
+  if (appInsights.appInsights && connectionString) {
     appInsights.clearAuthenticatedUserContext();
+    console.log('✅ User context cleared');
+  } else {
+    console.log('⚠️ AppInsights not initialized - user context clear logged locally only');
   }
 };
 
