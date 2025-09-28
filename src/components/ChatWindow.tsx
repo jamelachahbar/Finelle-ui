@@ -3,7 +3,7 @@ import { Button } from '@fluentui/react-components';
 import ChatBubble from './ChatBubble';
 import TypingBubble from './TypingBubble';
 import './ChatWindow.css';
-import { ChevronDown24Regular, Send24Regular } from '@fluentui/react-icons';
+import { Send24Regular } from '@fluentui/react-icons';
 import { Citation, formatCitationsForMarkdown } from '../utils/citationUtils';
 
 type ChatMessage = {
@@ -71,17 +71,27 @@ export default function ChatWindow() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [typingMessage, setTypingMessage] = useState<string>('Finelle is thinking...');
-  const [showScrollButton, setShowScrollButton] = useState(false);
+  // Remove scroll button state since we don't have internal scrolling
+  // const [showScrollButton, setShowScrollButton] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Simple scroll to bottom function
+  // Scroll to bottom using page-level scrolling instead of internal container scroll
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Use smooth scrolling to the bottom of the page
+    window.scrollTo({
+      top: document.documentElement.scrollHeight,
+      behavior: 'smooth'
+    });
   };
 
-  // Auto-scroll when messages change or typing state changes
+  // Auto-scroll to bottom when messages change or typing status changes
   useEffect(() => {
-    scrollToBottom();
+    // Small delay to ensure DOM has updated before scrolling
+    const timer = setTimeout(() => {
+      scrollToBottom();
+    }, 100);
+    
+    return () => clearTimeout(timer);
   }, [messages, isTyping, typingMessage]);
   const handleSend = async () => {
     if (!input.trim() || isTyping) return;    setMessages((prev) => [
@@ -91,8 +101,10 @@ export default function ChatWindow() {
         agent: 'You',
         content: input,
       },
-    ]);    // Immediately scroll to bottom when user sends a message
-    scrollToBottom();
+    ]);    // Auto-scroll to bottom after sending message
+    setTimeout(() => {
+      scrollToBottom();
+    }, 100);
 
     setIsTyping(true);
     const encodedPrompt = encodeURIComponent(input);
@@ -274,9 +286,9 @@ export default function ChatWindow() {
         }]);
         
         // Auto-scroll after adding fallback message
-        requestAnimationFrame(() => {
+        setTimeout(() => {
           scrollToBottom();
-        });
+        }, 100);
       }
     }
     };
@@ -301,24 +313,22 @@ export default function ChatWindow() {
     setTimeout(() => {
       inputRef.current?.focus();
     }, 50);
-  };  // Simple scroll detection for showing scroll button
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    
-    const handleScroll = () => {
-      // Show scroll button if user scrolled up more than 150px from bottom
-      const isNearBottom = Math.abs(container.scrollHeight - container.scrollTop - container.clientHeight) < 150;
-      setShowScrollButton(!isNearBottom);
-    };
-
-    container.addEventListener('scroll', handleScroll);
-    handleScroll(); // Check initially
-    
-    return () => {
-      container.removeEventListener('scroll', handleScroll);
-    };
-  }, []);
+  };  // Remove scroll detection since we don't have internal scrolling
+  // useEffect(() => {
+  //   const container = containerRef.current;
+  //   if (!container) return;
+  //   
+  //   const handleScroll = () => {
+  //     const isNearBottom = Math.abs(container.scrollHeight - container.scrollTop - container.clientHeight) < 150;
+  //     setShowScrollButton(!isNearBottom);
+  //   };
+  //   container.addEventListener('scroll', handleScroll);
+  //   handleScroll();
+  //   
+  //   return () => {
+  //     container.removeEventListener('scroll', handleScroll);
+  //   };
+  // }, []);
 
   // Update input rows based on content, but keep it compact and auto-expand
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -353,14 +363,13 @@ export default function ChatWindow() {
         id="chat-container"        
         style={{
           flex: 1,
-          overflowY: 'auto',
+          overflowY: 'hidden', // Remove vertical scroll
           overflowX: 'hidden',
           paddingBottom: 140,
           position: 'relative',
           maxWidth: '100%',
           margin: '0 auto',
           width: '100%',
-          scrollBehavior: 'smooth',
         }}
       >
         {messages.length === 0 ? (
@@ -433,12 +442,7 @@ export default function ChatWindow() {
           </div>
         )}
       </div>
-      {/* Floating scroll-to-bottom button OUTSIDE chat container */}{' '}
-      {showScrollButton && (
-        <button className="jzy-scroll-btn" onClick={scrollToBottom} aria-label="Scroll to bottom">
-          <ChevronDown24Regular style={{ width: '18px', height: '18px' }} />
-        </button>
-      )}
+      {/* Remove scroll-to-bottom button since we don't have internal scrolling */}
       {/* Input Bar */}
       <div className="jzy-chat-inputbar">
         <div className="jzy-chat-inputbar-inner">
