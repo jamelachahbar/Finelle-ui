@@ -23,6 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 
-.env
+.env*
+.env.*
 # GitHub Actions bootstrap reference
 .env.github-actions
