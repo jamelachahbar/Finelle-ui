@@ -3,8 +3,20 @@ import { Button } from '@fluentui/react-components';
 import ChatBubble from './ChatBubble';
 import TypingBubble from './TypingBubble';
 import './ChatWindow.css';
-import { Send24Regular } from '@fluentui/react-icons';
+import { Send24Regular, Mic24Regular, MicOff24Regular } from '@fluentui/react-icons';
 import { Citation, formatCitationsForMarkdown } from '../utils/citationUtils';
+import { speechService } from '../services/speechService';
+
+interface VoiceSettings {
+  voiceEnabled: boolean;
+  provider: 'browser' | 'backend';
+  selectedVoice: string;
+  speechRate: number;
+  speechPitch: number;
+  speechVolume: number;
+  autoSpeak: boolean;
+}
+
 
 type ChatMessage = {
   role: 'user' | 'agent' | 'assistant' | 'system';
@@ -68,14 +80,65 @@ export default function ChatWindow() {
     localStorage.setItem('sessionId', sessionIdRef.current);
     // Clear any cached agent names that might reference old branding
     localStorage.removeItem('lastAgentName');
-  }, []);  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  }, []);  
+  
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [typingMessage, setTypingMessage] = useState<string>('Haris is thinking...');
-  // Remove scroll button state since we don't have internal scrolling
-  // const [showScrollButton, setShowScrollButton] = useState(false);
+  
+  // Voice settings state
+  const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>({
+    voiceEnabled: true,
+    provider: 'browser',
+    selectedVoice: '',
+    speechRate: 1.0,
+    speechPitch: 1.0,
+    speechVolume: 1.0,
+    autoSpeak: false,
+  });
+  
+  // Speech functionality state
+  const [isRecording, setIsRecording] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [speechRecognition, setSpeechRecognition] = useState<any>(null);
+  const [speechSynthesis] = useState(window.speechSynthesis);
+  
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Load voice settings on component mount
+  useEffect(() => {
+    const loadVoiceSettings = () => {
+      try {
+        const savedSettings = localStorage.getItem('harisVoiceSettings');
+        if (savedSettings) {
+          const settings = JSON.parse(savedSettings);
+          console.log('📢 Loaded voice settings for chat:', settings);
+          setVoiceSettings(settings);
+          
+          // Apply settings to speech service
+          speechService.setProvider(settings.provider);
+          console.log(`🎤 Speech service configured for ${settings.provider} provider`);
+        }
+      } catch (error) {
+        console.error('Error loading voice settings:', error);
+      }
+    };
+
+    loadVoiceSettings();
+
+    // Listen for voice settings changes from the modal
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'harisVoiceSettings') {
+        loadVoiceSettings();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   // Scroll to bottom using page-level scrolling instead of internal container scroll
   const scrollToBottom = () => {
@@ -95,6 +158,100 @@ export default function ChatWindow() {
     
     return () => clearTimeout(timer);
   }, [messages, isTyping, typingMessage]);
+
+  // Initialize speech recognition
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+      
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setInput(transcript);
+        setIsRecording(false);
+      };
+      
+      recognition.onerror = () => {
+        setIsRecording(false);
+      };
+      
+      recognition.onend = () => {
+        setIsRecording(false);
+      };
+      
+      setSpeechRecognition(recognition);
+    }
+  }, []);
+
+  // Speech recognition functions
+  const startRecording = () => {
+    if (speechRecognition && !isRecording) {
+      setIsRecording(true);
+      speechRecognition.start();
+    }
+  };
+
+  const stopRecording = () => {
+    if (speechRecognition && isRecording) {
+      speechRecognition.stop();
+      setIsRecording(false);
+    }
+  };
+
+  // Enhanced Text-to-Speech function using voice settings
+  const speakText = async (text: string) => {
+    if (isSpeaking || !voiceSettings.voiceEnabled) return;
+    
+    try {
+      setIsSpeaking(true);
+      console.log('🔊 Speaking with voice settings:', {
+        voiceEnabled: voiceSettings.voiceEnabled,
+        provider: voiceSettings.provider,
+        voice: voiceSettings.selectedVoice,
+        rate: voiceSettings.speechRate,
+        pitch: voiceSettings.speechPitch,
+        volume: voiceSettings.speechVolume
+      });
+      
+      // Clean text for better speech (remove markdown, etc.)
+      const cleanText = text
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove markdown links
+        .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold markdown
+        .replace(/\*(.*?)\*/g, '$1') // Remove italic markdown
+        .replace(/`(.*?)`/g, '$1') // Remove code markdown
+        .replace(/#{1,6}\s/g, '') // Remove headers
+        .replace(/\n+/g, '. ') // Replace newlines with pauses
+        .trim();
+      
+      const options = {
+        voice: voiceSettings.selectedVoice,
+        rate: voiceSettings.speechRate,
+        pitch: voiceSettings.speechPitch,
+        volume: voiceSettings.speechVolume,
+      };
+      
+      await speechService.synthesizeSpeech(cleanText, options);
+      console.log('✅ Speech completed successfully');
+    } catch (error) {
+      console.error('❌ Speech failed:', error);
+    } finally {
+      setIsSpeaking(false);
+    }
+  };
+
+  const stopSpeaking = () => {
+    speechService.stopSpeech();
+    if (speechSynthesis && isSpeaking) {
+      speechSynthesis.cancel();
+    }
+    setIsSpeaking(false);
+  };
   const handleSend = async () => {
     if (!input.trim() || isTyping) return;    setMessages((prev) => [
       ...prev,
@@ -246,7 +403,16 @@ export default function ChatWindow() {
           console.log('Adding message with citations:', msg.citations.length);
         } else {
           console.log('Adding message with NO citations');
-        }        setMessages((prev) => [...prev, msg]);
+        }        
+        setMessages((prev) => [...prev, msg]);
+        
+        // Auto-speak new agent responses if enabled
+        if (voiceSettings.voiceEnabled && voiceSettings.autoSpeak && (msg.role === 'agent' || msg.role === 'assistant') && msg.content && !isSpeaking) {
+          // Small delay to ensure message is rendered before speaking
+          setTimeout(() => {
+            speakText(msg.content);
+          }, 500);
+        }
       }    } catch (error) {
       console.error('❌ Data processing error:', error);
       console.error('❌ Raw event data that failed to process:', event.data);
@@ -281,11 +447,19 @@ export default function ChatWindow() {
       
       // Display the fallback content if we have any
       if (fallbackContent.trim()) {
-        setMessages((prev) => [...prev, {
-          role: 'agent',
+        const agentMessage = {
+          role: 'agent' as const,
           agent: 'Haris',
           content: fallbackContent,
-        }]);
+        };
+        setMessages((prev) => [...prev, agentMessage]);
+        
+        // Auto-speak agent response if enabled
+        if (voiceSettings.voiceEnabled && voiceSettings.autoSpeak && agentMessage.content && !isSpeaking) {
+          setTimeout(() => {
+            speakText(agentMessage.content);
+          }, 500);
+        }
         
         // Auto-scroll after adding fallback message
         setTimeout(() => {
@@ -429,14 +603,33 @@ export default function ChatWindow() {
 
               return msg.role === 'agent' || msg.role === 'assistant' ? (
                 <div key={idx}>
-                  <ChatBubble role={msg.role} agent={msg.agent} content={processedContent} sources={msg.sources} citations={msg.citations} />
+                  <ChatBubble 
+                    role={msg.role} 
+                    agent={msg.agent} 
+                    content={processedContent} 
+                    sources={msg.sources} 
+                    citations={msg.citations}
+                    onSpeak={speakText}
+                    onStopSpeaking={stopSpeaking}
+                    isSpeaking={isSpeaking}
+                  />
                   {/* Debug info - only show in development */}
                   {process.env.NODE_ENV === 'development' && msg.citations && msg.citations.length > 0 && (
                     <div style={{ fontSize: '11px', opacity: 0.6, marginTop: '2px', textAlign: 'right' }}>{msg.citations.length} citations</div>
                   )}
                 </div>
               ) : (
-                <ChatBubble key={idx} role={msg.role} agent={msg.agent} content={processedContent} sources={msg.sources} citations={msg.citations} />
+                <ChatBubble 
+                  key={idx} 
+                  role={msg.role} 
+                  agent={msg.agent} 
+                  content={processedContent} 
+                  sources={msg.sources} 
+                  citations={msg.citations}
+                  onSpeak={speakText}
+                  onStopSpeaking={stopSpeaking}
+                  isSpeaking={isSpeaking}
+                />
               );            })}
             {isTyping && <TypingBubble message={typingMessage} />}
             <div ref={messagesEndRef} style={{ height: '40px' }} /> {/* Reduced spacer for natural layout */}
@@ -446,6 +639,30 @@ export default function ChatWindow() {
       {/* Remove scroll-to-bottom button since we don't have internal scrolling */}
       {/* Input Bar */}
       <div className="jzy-chat-inputbar">
+        {/* Auto-speak toggle */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          paddingBottom: '8px',
+          fontSize: '0.75rem',
+          color: '#5f6368'
+        }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={voiceSettings.autoSpeak}
+              onChange={(e) => {
+                const newSettings = { ...voiceSettings, autoSpeak: e.target.checked };
+                setVoiceSettings(newSettings);
+                localStorage.setItem('harisVoiceSettings', JSON.stringify(newSettings));
+                console.log('🔊 Auto-speak toggled:', e.target.checked);
+              }}
+              style={{ margin: 0 }}
+            />
+            🔊 Auto-speak Haris responses {!voiceSettings.voiceEnabled ? '(Voice disabled in settings)' : '(using saved voice settings)'}
+          </label>
+        </div>
+        
         <div className="jzy-chat-inputbar-inner">
           <textarea
             ref={inputRef}
@@ -467,6 +684,29 @@ export default function ChatWindow() {
               }
             }}
           />
+          {/* Microphone Button for Speech Recognition */}
+          <Button 
+            appearance="outline" 
+            className={`jzy-chat-mic-btn ${isRecording ? 'recording' : ''}`}
+            onClick={isRecording ? stopRecording : startRecording}
+            disabled={isTyping}
+            aria-label={isRecording ? "Stop recording" : "Start voice input"}
+            style={{
+              borderRadius: '50%',
+              minWidth: '40px',
+              width: '40px',
+              height: '40px',
+              minHeight: '40px',
+              marginRight: '8px',
+              marginBottom: '4px',
+              backgroundColor: isRecording ? '#ff4444' : 'transparent',
+              color: isRecording ? 'white' : '#5f6368',
+              border: isRecording ? 'none' : '1px solid #dadce0',
+              animation: isRecording ? 'pulse 1.5s ease-in-out infinite' : 'none'
+            }}
+          >
+            {isRecording ? <MicOff24Regular /> : <Mic24Regular />}
+          </Button>
           <Button appearance="primary" className="jzy-chat-send-btn" onClick={handleSend} disabled={!input.trim() || isTyping} aria-label="Send message">
             <Send24Regular />
           </Button>

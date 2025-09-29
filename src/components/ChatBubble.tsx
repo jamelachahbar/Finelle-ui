@@ -11,6 +11,8 @@ import rehypeKatex from 'rehype-katex';
 import './jzy-markdown.css';
 import { Citation } from '../utils/citationUtils';
 import CitationHandler from './CitationHandler';
+import { Button } from '@fluentui/react-components';
+import { Speaker224Regular, SpeakerMute24Regular } from '@fluentui/react-icons';
 
 interface ChatBubbleProps {
   role: 'user' | 'agent' | 'system' | 'assistant';
@@ -18,6 +20,9 @@ interface ChatBubbleProps {
   content: string;
   sources?: string[];
   citations?: Citation[];
+  onSpeak?: (text: string) => void;
+  onStopSpeaking?: () => void;
+  isSpeaking?: boolean;
 }
 
 function tryRenderJsonTable(jsonString: string): JSX.Element | null {
@@ -58,7 +63,16 @@ function tryRenderJsonTable(jsonString: string): JSX.Element | null {
   }
 }
 
-const ChatBubble: React.FC<ChatBubbleProps> = ({ role, agent = 'TeamLeader', content, sources = [], citations = [] }) => {
+const ChatBubble: React.FC<ChatBubbleProps> = ({ 
+  role, 
+  agent = 'TeamLeader', 
+  content, 
+  sources = [], 
+  citations = [],
+  onSpeak,
+  onStopSpeaking,
+  isSpeaking = false
+}) => {
   const isUser = role === 'user';
 
   // Log for debugging
@@ -102,24 +116,46 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({ role, agent = 'TeamLeader', con
   return (
     <div className={`jzy-chat-bubble ${isUser ? 'jzy-user' : 'jzy-agent'}`}>
       <div className="jzy-chat-meta">
-        <span className={`jzy-chat-role jzy-tag-${role}`}>
-          {isUser ? (
-            '🧑 You'
-          ) : (
-            <>
-              {agentIcons[agent] ? (
-                <img 
-                  src={agentIcons[agent]} 
-                  alt={agent} 
-                  style={{ width: '16px', height: '16px', marginRight: '6px', verticalAlign: 'middle' }} 
-                />
-              ) : (
-                `${agentEmojis[agent] || '🤖'} `
-              )}
-              {agent}
-            </>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <span className={`jzy-chat-role jzy-tag-${role}`}>
+            {isUser ? (
+              '🧑 You'
+            ) : (
+              <>
+                {agentIcons[agent] ? (
+                  <img 
+                    src={agentIcons[agent]} 
+                    alt={agent} 
+                    style={{ width: '16px', height: '16px', marginRight: '6px', verticalAlign: 'middle' }} 
+                  />
+                ) : (
+                  `${agentEmojis[agent] || '🤖'} `
+                )}
+                {agent}
+              </>
+            )}
+          </span>
+          
+          {/* Speaker button for agent messages */}
+          {!isUser && onSpeak && (
+            <Button
+              appearance="subtle"
+              size="small"
+              onClick={() => isSpeaking ? onStopSpeaking?.() : onSpeak(content)}
+              disabled={!content.trim()}
+              aria-label={isSpeaking ? "Stop speaking" : "Read message aloud"}
+              style={{
+                minWidth: '28px',
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                color: isSpeaking ? '#ff4444' : '#5f6368'
+              }}
+            >
+              {isSpeaking ? <SpeakerMute24Regular style={{ width: '14px', height: '14px' }} /> : <Speaker224Regular style={{ width: '14px', height: '14px' }} />}
+            </Button>
           )}
-        </span>
+        </div>
       </div>
       <div className="jzy-chat-content">
         {jsonTable ? (

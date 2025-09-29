@@ -2,8 +2,9 @@
 import { makeStyles } from "@fluentui/react-components";
 import { Link } from "react-router-dom";
 import { Button } from "@fluentui/react-components";
-import { Home24Regular, Chat24Regular, DataTrending24Regular } from "@fluentui/react-icons";
+import { Home24Regular, Chat24Regular, DataTrending24Regular, Settings24Regular } from "@fluentui/react-icons";
 import HarisLogo from '../assets/Harislogo.png';
+import VoiceSettingsModal from './VoiceSettingsModal';
 
 const useStyles = makeStyles({
   nav: {
@@ -26,6 +27,7 @@ const useStyles = makeStyles({
     display: "flex",
     gap: "0.75rem",
     fontWeight: 500,
+    alignItems: "center",
   },
   buttonLink: {
     textDecoration: "none",
@@ -41,6 +43,21 @@ const useStyles = makeStyles({
     fontSize: "0.9375rem",
     fontWeight: 500,
     color: "#5f6368",
+    ":hover": {
+      backgroundColor: "#f1f3f4",
+      color: "#3c4043",
+    },
+  },
+  settingsButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+    padding: "0.5rem 0.75rem",
+    borderRadius: "6px",
+    fontSize: "0.9375rem",
+    fontWeight: 500,
+    color: "#5f6368",
+    border: "1px solid #dadce0",
     ":hover": {
       backgroundColor: "#f1f3f4",
       color: "#3c4043",
@@ -72,6 +89,19 @@ export default function NavBar() {
             Telemetry
           </Button>
         </Link>
+        
+        {/* Voice Settings Modal */}
+        <VoiceSettingsModal 
+          trigger={
+            <Button 
+              icon={<Settings24Regular />} 
+              appearance="outline" 
+              className={styles.settingsButton}
+            >
+              Voice Settings
+            </Button>
+          }
+        />
       </nav>
     </header>
   );
