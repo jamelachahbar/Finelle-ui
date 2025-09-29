@@ -1,7 +1,7 @@
-# Azure Developer CLI configuration for Finelle UI
-name: finelle-ui
+# Azure Developer CLI configuration for Haris UI
+name: haris-ui
 metadata:
-  template: finelle-react-containerapp@0.0.1-beta
+  template: haris-react-containerapp@0.0.1-beta
 
 # Infrastructure configuration
 infra:

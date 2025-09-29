@@ -53,7 +53,7 @@ if (connectionString && connectionString.trim() !== '') {
   
   // Track initial page view
   appInsights.trackPageView({
-    name: 'Finelle UI - Initial Load',
+    name: 'Haris UI - Initial Load',
     uri: window.location.href
   });
 

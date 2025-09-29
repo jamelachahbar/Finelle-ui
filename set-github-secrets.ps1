@@ -1,4 +1,4 @@
-# Finelle UI - GitHub Secrets Setter
+# Haris UI - GitHub Secrets Setter
 # This script uses REST API to set GitHub secrets when GitHub CLI is not available
 
 param(
@@ -9,7 +9,7 @@ param(
     [string]$RepoOwner = "jamelachahbar",
     
     [Parameter(Mandatory=$false)]
-    [string]$RepoName = "Finelle-ui"
+    [string]$RepoName = "Haris-ui"
 )
 
 # Read the service principal details from the reference file
@@ -34,7 +34,7 @@ Write-Host "🔐 Setting GitHub Secrets via REST API..." -ForegroundColor Cyan
 $headers = @{
     "Authorization" = "token $GitHubToken"
     "Accept" = "application/vnd.github.v3+json"
-    "User-Agent" = "Finelle-Bootstrap-Script"
+    "User-Agent" = "Haris-Bootstrap-Script"
 }
 
 try {
@@ -80,7 +80,7 @@ try {
         Write-Host ""
         Write-Host "🚀 Now you can trigger the GitHub Actions workflow:" -ForegroundColor Cyan
         Write-Host "   1. Go to: https://github.com/$RepoOwner/$RepoName/actions" -ForegroundColor Gray
-        Write-Host "   2. Click 'Deploy Finelle UI to Azure Container Apps'" -ForegroundColor Gray
+        Write-Host "   2. Click 'Deploy Haris UI to Azure Container Apps'" -ForegroundColor Gray
         Write-Host "   3. Click 'Run workflow'" -ForegroundColor Gray
         Write-Host "   4. Check 'Run initial bootstrap' checkbox" -ForegroundColor Gray
         Write-Host "   5. Click 'Run workflow'" -ForegroundColor Gray

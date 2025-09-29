@@ -1,14 +1,14 @@
 targetScope = 'resourceGroup'
 
-metadata description = 'Finelle UI Azure Container Apps deployment'
-metadata author = 'Finelle Team'
+metadata description = 'Haris UI Azure Container Apps deployment'
+metadata author = 'Haris Team'
 
 // ==========================
 // PARAMETERS
 // ==========================
 
 @description('The name of the project')
-param projectName string = 'finelle'
+param projectName string = 'haris'
 
 @description('The environment name (e.g., dev, staging, prod)')
 param environmentName string = 'dev'
@@ -186,7 +186,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.11.0' = {
     // Container configuration - using placeholder image for fast initial deployment
     containers: [
       {
-        name: 'finelle-ui'
+        name: 'haris-ui'
         image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
         resources: {
           cpu: '0.5'

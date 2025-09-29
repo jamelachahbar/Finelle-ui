@@ -1,5 +1,5 @@
-# Finelle UI - AI-Powered Chat Interface
-
+# Haris UI - AI-Powered Chat Interface
+![alt text](src/assets/Harislogo.png)
 A sophisticated React application with TypeScript, Vite, and Microsoft Fluent UI, featuring AI-powered chat capabilities and comprehensive Azure integration. Optimized for deployment on Azure Container Apps with fast provisioning (~2-3 minutes) and comprehensive Application Insights monitoring.
 
 ## ✨ Features
@@ -13,9 +13,7 @@ A sophisticated React application with TypeScript, Vite, and Microsoft Fluent UI
 - **⚡ Fast Deployment**: Image upsert technique for rapid provisioning
 - **🔄 Auto-scaling**: Azure Container Apps with HTTP-based scaling
 
-![](image.png)
-![alt text](image-1.png)
-![alt text](image-2.png)
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -50,7 +48,7 @@ azd up
 ```
 
 **Follow prompts:**
-- Environment name: `finelle-dev`
+- Environment name: `haris-dev`
 - Subscription: [Select yours]
 - Location: `East US 2`
 
@@ -338,7 +336,7 @@ gh run list --workflow=azure-dev.yml
 ### Project Structure
 ```
 src/
-├── api/           # API integration (finelleApi.ts)
+├── api/           # API integration (harisApi.ts)
 ├── components/    # Reusable UI components
 │   ├── ChatWindow/     # Chat interface components
 │   ├── ChartDisplay/   # Data visualization
@@ -418,7 +416,7 @@ rm -rf node_modules package-lock.json
 npm install
 
 # Check Docker build locally
-docker build -t finelle-ui:test .
+docker build -t haris-ui:test .
 ```
 
 #### 5. **ACR Authentication Errors**

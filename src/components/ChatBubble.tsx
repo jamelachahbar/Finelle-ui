@@ -5,7 +5,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import 'highlight.js/styles/github.css';
 import './ChatBubble.css';
-import { agentEmojis } from '../constants/agents';
+import { agentEmojis, agentIcons } from '../constants/agents';
 import 'katex/dist/katex.min.css';
 import rehypeKatex from 'rehype-katex';
 import './jzy-markdown.css';
@@ -102,7 +102,24 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({ role, agent = 'TeamLeader', con
   return (
     <div className={`jzy-chat-bubble ${isUser ? 'jzy-user' : 'jzy-agent'}`}>
       <div className="jzy-chat-meta">
-        <span className={`jzy-chat-role jzy-tag-${role}`}>{isUser ? '🧑 You' : `${agentEmojis[agent] || '🤖'} ${agent}`}</span>
+        <span className={`jzy-chat-role jzy-tag-${role}`}>
+          {isUser ? (
+            '🧑 You'
+          ) : (
+            <>
+              {agentIcons[agent] ? (
+                <img 
+                  src={agentIcons[agent]} 
+                  alt={agent} 
+                  style={{ width: '16px', height: '16px', marginRight: '6px', verticalAlign: 'middle' }} 
+                />
+              ) : (
+                `${agentEmojis[agent] || '🤖'} `
+              )}
+              {agent}
+            </>
+          )}
+        </span>
       </div>
       <div className="jzy-chat-content">
         {jsonTable ? (

@@ -3,7 +3,7 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "projectName": {
-      "value": "finelle"
+      "value": "haris"
     },
     "environmentName": {
       "value": "prod"
@@ -13,9 +13,9 @@
     },
     "tags": {
       "value": {
-        "project": "finelle",
+        "project": "haris",
         "environment": "production",
-        "owner": "finelle-team",
+        "owner": "haris-team",
         "cost-center": "engineering",
         "deployment-method": "bicep-avm",
         "business-unit": "finops",

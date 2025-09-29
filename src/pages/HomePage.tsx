@@ -2,6 +2,7 @@ import { Text, Button } from "@fluentui/react-components";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { trackEvent, trackPageView, trackTrace } from "../utils/applicationInsights";
+import HarisLogo from '../assets/Harislogo.png';
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -61,6 +62,19 @@ export default function HomePage() {
         padding: "0 16px",
       }}
     >
+      {/* Haris Logo - Centered above welcome message */}
+      <div style={{ marginBottom: "24px" }}>
+        <img 
+          src={HarisLogo} 
+          alt="Haris" 
+          style={{ 
+            height: "180px", 
+            width: "auto", 
+            filter: "drop-shadow(0 6px 12px rgba(0, 0, 0, 0.15))"
+          }} 
+        />
+      </div>
+
       <Text
         weight="bold"
         size={800}
@@ -70,11 +84,11 @@ export default function HomePage() {
           WebkitTextFillColor: "transparent",
         }}
       >
-        Hello, FinOps Explorer
+        I'm Haris, Your FinOps Guardian
       </Text>
 
       <Text size={400} style={{ color: "#666", maxWidth: "600px" }}>
-        Finelle is your intelligent FinOps assistant. Ask questions about Azure costs, KQL, or resources.
+        Discover insights on Azure costs, FinOps, and beyond — Haris shields your cloud from waste and empowers you to master FinOps.
       </Text>
 
       <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", justifyContent: "center" }}>
@@ -83,7 +97,7 @@ export default function HomePage() {
           size="large"
           onClick={handleChatNavigation}
         >
-          💬 Chat with Finelle
+          💬 Chat with Haris
         </Button>
         
         <Button

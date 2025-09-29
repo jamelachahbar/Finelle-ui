@@ -3,6 +3,7 @@ import { makeStyles } from "@fluentui/react-components";
 import { Link } from "react-router-dom";
 import { Button } from "@fluentui/react-components";
 import { Home24Regular, Chat24Regular, DataTrending24Regular } from "@fluentui/react-icons";
+import HarisLogo from '../assets/Harislogo.png';
 
 const useStyles = makeStyles({
   nav: {
@@ -51,7 +52,10 @@ export default function NavBar() {
   const styles = useStyles();
   return (
     <header className={styles.nav}>
-      <div className={styles.logo}>🤖 Finelle</div>
+      <div className={styles.logo}>
+        <img src={HarisLogo} alt="Haris" style={{ height: '32px', width: 'auto' }} />
+        Haris
+      </div>
       <nav className={styles.links}>
         <Link to="/" className={styles.buttonLink}>
           <Button icon={<Home24Regular />} appearance="transparent" className={styles.navButton}>

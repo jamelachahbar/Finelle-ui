@@ -66,11 +66,13 @@ export default function ChatWindow() {
   const sessionIdRef = useRef(localStorage.getItem('sessionId') || crypto.randomUUID());
   useEffect(() => {
     localStorage.setItem('sessionId', sessionIdRef.current);
+    // Clear any cached agent names that might reference old branding
+    localStorage.removeItem('lastAgentName');
   }, []);  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isTyping, setIsTyping] = useState(false);
-  const [typingMessage, setTypingMessage] = useState<string>('Finelle is thinking...');
+  const [typingMessage, setTypingMessage] = useState<string>('Haris is thinking...');
   // Remove scroll button state since we don't have internal scrolling
   // const [showScrollButton, setShowScrollButton] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -211,7 +213,7 @@ export default function ChatWindow() {
       } // Create message with correct structure for proper citation handling
       const msg: ChatMessage = {
         role: data.role || 'agent',
-        agent: data.agent || 'Finelle',
+        agent: data.agent || 'Haris',
         content: processedContent,
         sources: data.sources || [],
         // Ensure citations are explicitly set if available
@@ -281,7 +283,7 @@ export default function ChatWindow() {
       if (fallbackContent.trim()) {
         setMessages((prev) => [...prev, {
           role: 'agent',
-          agent: 'Finelle',
+          agent: 'Haris',
           content: fallbackContent,
         }]);
         
@@ -300,7 +302,7 @@ export default function ChatWindow() {
         ...prev,
         {
           role: 'agent',
-          agent: 'Finelle',
+          agent: 'Haris',
           content: '⚠️ Something went wrong. Please try again or check the server.',
         },
       ]);
@@ -353,32 +355,31 @@ export default function ChatWindow() {
   }, []);
   return (
     <div style={{ 
-      height: '100vh', 
+      minHeight: '100vh',  // Use minHeight instead of height to allow content to expand
       display: 'flex', 
       flexDirection: 'column', 
       background: 'linear-gradient(180deg, #fafbfc 0%, #f8f9fa 100%)',
-      fontFamily: "'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+      fontFamily: "'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      paddingBottom: '120px' // Add padding to account for fixed input bar
     }}>      <div
         ref={containerRef}
         id="chat-container"        
         style={{
-          flex: 1,
-          overflowY: 'hidden', // Remove vertical scroll
+          width: '100%',
+          overflowY: 'visible', // Allow natural content flow
           overflowX: 'hidden',
-          paddingBottom: 140,
           position: 'relative',
           maxWidth: '100%',
           margin: '0 auto',
-          width: '100%',
         }}
       >
         {messages.length === 0 ? (
           <div className="welcome-container">
             <div className="welcome-title">
-              Hello, FinOps Explorer
+              Hello, I'm Haris
             </div>
             <div className="welcome-subtitle">
-              Ask Finelle anything about your Azure environment and get intelligent insights.
+              Ask Haris anything about your Azure environment and get intelligent insights.
             </div>
             <div className="suggestions-grid">
               {promptSuggestions.map((suggestion, idx) => (
@@ -438,7 +439,7 @@ export default function ChatWindow() {
                 <ChatBubble key={idx} role={msg.role} agent={msg.agent} content={processedContent} sources={msg.sources} citations={msg.citations} />
               );            })}
             {isTyping && <TypingBubble message={typingMessage} />}
-            <div ref={messagesEndRef} />
+            <div ref={messagesEndRef} style={{ height: '40px' }} /> {/* Reduced spacer for natural layout */}
           </div>
         )}
       </div>
@@ -451,7 +452,7 @@ export default function ChatWindow() {
             className="jzy-chat-textarea"
             rows={1}
             value={input}
-            placeholder="Ask Finelle anything... (Press Enter to send)"
+            placeholder="Ask Haris anything... (Press Enter to send)"
             onChange={handleInputChange}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
