@@ -13,6 +13,10 @@ A sophisticated React application with TypeScript, Vite, and Microsoft Fluent UI
 - **⚡ Fast Deployment**: Image upsert technique for rapid provisioning
 - **🔄 Auto-scaling**: Azure Container Apps with HTTP-based scaling
 
+![frontendhomepage](image-3.png)
+![alt text](image-4.png)
+![alt text](image-5.png)
+<video controls src="harisdemo.mp4" title="Title"></video>
 
 ## 🚀 Quick Start
 
