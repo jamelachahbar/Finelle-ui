@@ -78,10 +78,15 @@ class SpeechService {
   private speechSynthesis: SpeechSynthesis | null = null;
   private speechRecognition: ISpeechRecognition | null = null;
   private currentAudio: HTMLAudioElement | null = null;
+  private currentAbortController: AbortController | null = null;
 
   constructor(baseURL?: string) {
     this.baseURL = baseURL || BASE_URL;
     this.initializeBrowserApis();
+  }
+
+  private generateSessionId(): string {
+    return `speech_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
   private initializeBrowserApis() {
@@ -231,17 +236,28 @@ class SpeechService {
    * Synthesize speech using backend Azure Speech Services
    */
   private async synthesizeWithBackend(text: string, voice: string): Promise<void> {
-    const url = `${this.baseURL}/api/speech/synthesize?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(voice)}&format=mp3`;
+    // Cancel any existing request
+    if (this.currentAbortController) {
+      this.currentAbortController.abort();
+    }
+    
+    // Create new abort controller for this request
+    this.currentAbortController = new AbortController();
+    const sessionId = this.generateSessionId(); // Generate new session for each request
+    
+    const url = `${this.baseURL}/api/speech/synthesize?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(voice)}&format=mp3&sessionId=${encodeURIComponent(sessionId)}`;
     console.log(`🔊 Backend synthesis request:`, {
       url,
       text: text.substring(0, 50) + (text.length > 50 ? '...' : ''),
       voice,
+      sessionId,
       baseURL: this.baseURL
     });
 
     try {
       const response = await fetch(url, {
         method: 'POST',
+        signal: this.currentAbortController.signal,
       });
 
       console.log(`📡 Synthesis response:`, {
@@ -278,12 +294,14 @@ class SpeechService {
           console.log(`✅ Audio playback completed`);
           URL.revokeObjectURL(audioUrl);
           this.currentAudio = null;
+          this.currentAbortController = null;
           resolve();
         };
         audio.onerror = (event) => {
           console.error(`❌ Audio playback failed:`, event);
           URL.revokeObjectURL(audioUrl);
           this.currentAudio = null;
+          this.currentAbortController = null;
           reject(new Error('Audio playback failed'));
         };
         audio.onloadstart = () => {
@@ -298,10 +316,20 @@ class SpeechService {
           console.error(`❌ Audio play() failed:`, error);
           URL.revokeObjectURL(audioUrl);
           this.currentAudio = null;
+          this.currentAbortController = null;
           reject(new Error(`Audio play failed: ${error.message}`));
         });
       });
     } catch (error) {
+      // Clear abort controller
+      this.currentAbortController = null;
+      
+      // Handle abort as expected behavior, not an error
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('🛑 Speech synthesis request was cancelled');
+        return; // Don't throw for intentional cancellation
+      }
+      
       console.error(`❌ Backend synthesis error:`, error);
       throw error;
     }
@@ -397,9 +425,12 @@ class SpeechService {
    * Stop any ongoing speech synthesis
    */
   stopSpeech() {
+    console.log('🛑 Stopping all speech synthesis...');
+    
     // Stop browser speech synthesis
     if (this.speechSynthesis) {
       this.speechSynthesis.cancel();
+      console.log('🛑 Browser speech synthesis cancelled');
     }
     
     // Stop audio element (backend synthesis)
@@ -407,6 +438,14 @@ class SpeechService {
       this.currentAudio.pause();
       this.currentAudio.currentTime = 0;
       this.currentAudio = null;
+      console.log('🛑 Audio playback stopped');
+    }
+    
+    // Abort any ongoing network request
+    if (this.currentAbortController) {
+      this.currentAbortController.abort();
+      this.currentAbortController = null;
+      console.log('🛑 Network request aborted');
     }
   }
 }

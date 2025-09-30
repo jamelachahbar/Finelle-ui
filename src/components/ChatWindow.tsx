@@ -252,6 +252,11 @@ export default function ChatWindow() {
       await speechService.synthesizeSpeech(cleanText, options);
       console.log('✅ Speech completed successfully');
     } catch (error) {
+      // Handle aborted requests gracefully (not really an error)
+      if (error instanceof Error && error.message.includes('cancelled')) {
+        console.log('🛑 Speech was cancelled by user');
+        return;
+      }
       console.error('❌ Speech failed:', error);
     } finally {
       setIsSpeaking(false);
