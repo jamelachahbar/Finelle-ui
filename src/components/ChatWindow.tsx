@@ -191,6 +191,11 @@ export default function ChatWindow() {
 
   // Speech recognition functions
   const startRecording = () => {
+    // Stop any ongoing speech before starting recording
+    if (isSpeaking) {
+      stopSpeaking();
+    }
+    
     if (speechRecognition && !isRecording) {
       setIsRecording(true);
       speechRecognition.start();
@@ -206,7 +211,15 @@ export default function ChatWindow() {
 
   // Enhanced Text-to-Speech function using voice settings
   const speakText = async (text: string) => {
-    if (isSpeaking || !voiceSettings.voiceEnabled) return;
+    if (!voiceSettings.voiceEnabled) return;
+    
+    // Stop any ongoing speech before starting new speech
+    if (isSpeaking) {
+      console.log('🛑 Stopping current speech to start new speech');
+      stopSpeaking();
+      // Longer delay to ensure speech completely stops
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
     
     try {
       setIsSpeaking(true);
@@ -246,14 +259,22 @@ export default function ChatWindow() {
   };
 
   const stopSpeaking = () => {
+    console.log('🛑 Stopping speech...');
+    
+    // Stop speech service (handles both browser and backend)
     speechService.stopSpeech();
+    
+    // Also stop browser speech synthesis directly as backup
     if (speechSynthesis && isSpeaking) {
       speechSynthesis.cancel();
     }
+    
+    // Reset state
     setIsSpeaking(false);
+    console.log('✅ Speech stopped and state reset');
   };
   const handleSend = async () => {
-    if (!input.trim() || isTyping) return;    setMessages((prev) => [
+    if (!input.trim() || isTyping || isSpeaking) return;    setMessages((prev) => [
       ...prev,
       {
         role: 'user',
@@ -669,7 +690,7 @@ export default function ChatWindow() {
             className="jzy-chat-textarea"
             rows={1}
             value={input}
-            placeholder="Ask Haris anything... (Press Enter to send)"
+            placeholder={isSpeaking ? "Speech in progress..." : "Ask Haris anything... (Press Enter to send)"}
             onChange={handleInputChange}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
@@ -684,13 +705,30 @@ export default function ChatWindow() {
               }
             }}
           />
+          {/* Speaking indicator */}
+          {isSpeaking && (
+            <div 
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                marginRight: '8px',
+                color: '#1a73e8',
+                fontSize: '12px',
+                fontWeight: '500',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <span style={{ marginRight: '4px', animation: 'speakingPulse 1.5s ease-in-out infinite' }}>🔊</span>
+              Speaking...
+            </div>
+          )}
           {/* Microphone Button for Speech Recognition */}
           <Button 
             appearance="outline" 
             className={`jzy-chat-mic-btn ${isRecording ? 'recording' : ''}`}
             onClick={isRecording ? stopRecording : startRecording}
-            disabled={isTyping}
-            aria-label={isRecording ? "Stop recording" : "Start voice input"}
+            disabled={isTyping || isSpeaking}
+            aria-label={isRecording ? "Stop recording" : isSpeaking ? "Speech in progress" : "Start voice input"}
             style={{
               backgroundColor: isRecording ? '#ff4444' : 'transparent',
               color: isRecording ? 'white' : '#5f6368',
@@ -699,7 +737,7 @@ export default function ChatWindow() {
           >
             {isRecording ? <MicOff24Regular /> : <Mic24Regular />}
           </Button>
-          <Button appearance="primary" className="jzy-chat-send-btn" onClick={handleSend} disabled={!input.trim() || isTyping} aria-label="Send message">
+          <Button appearance="primary" className="jzy-chat-send-btn" onClick={handleSend} disabled={!input.trim() || isTyping || isSpeaking} aria-label={isSpeaking ? "Speech in progress" : "Send message"}>
             <Send24Regular />
           </Button>
         </div>

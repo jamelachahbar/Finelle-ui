@@ -77,6 +77,7 @@ class SpeechService {
   private availableVoices: BackendVoice[] = [];
   private speechSynthesis: SpeechSynthesis | null = null;
   private speechRecognition: ISpeechRecognition | null = null;
+  private currentAudio: HTMLAudioElement | null = null;
 
   constructor(baseURL?: string) {
     this.baseURL = baseURL || BASE_URL;
@@ -269,15 +270,20 @@ class SpeechService {
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       
+      // Track current audio for stopping
+      this.currentAudio = audio;
+      
       return new Promise((resolve, reject) => {
         audio.onended = () => {
           console.log(`✅ Audio playback completed`);
           URL.revokeObjectURL(audioUrl);
+          this.currentAudio = null;
           resolve();
         };
         audio.onerror = (event) => {
           console.error(`❌ Audio playback failed:`, event);
           URL.revokeObjectURL(audioUrl);
+          this.currentAudio = null;
           reject(new Error('Audio playback failed'));
         };
         audio.onloadstart = () => {
@@ -291,6 +297,7 @@ class SpeechService {
         audio.play().catch(error => {
           console.error(`❌ Audio play() failed:`, error);
           URL.revokeObjectURL(audioUrl);
+          this.currentAudio = null;
           reject(new Error(`Audio play failed: ${error.message}`));
         });
       });
@@ -390,8 +397,16 @@ class SpeechService {
    * Stop any ongoing speech synthesis
    */
   stopSpeech() {
+    // Stop browser speech synthesis
     if (this.speechSynthesis) {
       this.speechSynthesis.cancel();
+    }
+    
+    // Stop audio element (backend synthesis)
+    if (this.currentAudio) {
+      this.currentAudio.pause();
+      this.currentAudio.currentTime = 0;
+      this.currentAudio = null;
     }
   }
 }
