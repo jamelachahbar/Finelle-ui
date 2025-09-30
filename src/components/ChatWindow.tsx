@@ -692,17 +692,9 @@ export default function ChatWindow() {
             disabled={isTyping}
             aria-label={isRecording ? "Stop recording" : "Start voice input"}
             style={{
-              borderRadius: '50%',
-              minWidth: '40px',
-              width: '40px',
-              height: '40px',
-              minHeight: '40px',
-              marginRight: '8px',
-              marginBottom: '4px',
               backgroundColor: isRecording ? '#ff4444' : 'transparent',
               color: isRecording ? 'white' : '#5f6368',
               border: isRecording ? 'none' : '1px solid #dadce0',
-              animation: isRecording ? 'pulse 1.5s ease-in-out infinite' : 'none'
             }}
           >
             {isRecording ? <MicOff24Regular /> : <Mic24Regular />}

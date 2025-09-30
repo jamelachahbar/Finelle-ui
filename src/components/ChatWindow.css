@@ -260,7 +260,7 @@
 .jzy-chat-inputbar-inner {
   display: flex;
   align-items: flex-end;
-  gap: 12px;
+  gap: 0;
   width: 100%;
   max-width: 768px;
   background: #ffffff;
@@ -313,7 +313,8 @@
   border: none !important;
   box-shadow: none !important;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  margin-bottom: 4px;
+  align-self: flex-end !important;
+  flex-shrink: 0 !important;
 }
 
 .jzy-chat-send-btn:hover:not(:disabled) {
@@ -386,7 +387,16 @@
     width: 36px !important;
     height: 36px !important;
     min-height: 36px !important;
-    margin-bottom: 2px;
+    align-self: flex-end !important;
+  }  
+
+  .jzy-chat-mic-btn {
+    min-width: 36px !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    align-self: flex-end !important;
+    margin-right: 12px !important;
   }  
 
   .jzy-chat-textarea {
@@ -440,6 +450,18 @@
 
 /* Speech functionality styles */
 .jzy-chat-mic-btn {
+  border-radius: 50% !important;
+  min-width: 40px !important;
+  width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin-right: 12px !important;
+  align-self: flex-end !important;
+  flex-shrink: 0 !important;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
