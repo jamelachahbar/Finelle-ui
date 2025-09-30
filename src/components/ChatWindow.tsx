@@ -433,9 +433,10 @@ export default function ChatWindow() {
         setMessages((prev) => [...prev, msg]);
         
         // Auto-speak new agent responses if enabled
-        if (voiceSettings.voiceEnabled && voiceSettings.autoSpeak && (msg.role === 'agent' || msg.role === 'assistant') && msg.content && !isSpeaking) {
+        if (voiceSettings.voiceEnabled && voiceSettings.autoSpeak && (msg.role === 'agent' || msg.role === 'assistant') && msg.content) {
           // Small delay to ensure message is rendered before speaking
           setTimeout(() => {
+            console.log('🔊 Auto-speaking new agent message (will stop current speech if any)');
             speakText(msg.content);
           }, 500);
         }
@@ -481,8 +482,9 @@ export default function ChatWindow() {
         setMessages((prev) => [...prev, agentMessage]);
         
         // Auto-speak agent response if enabled
-        if (voiceSettings.voiceEnabled && voiceSettings.autoSpeak && agentMessage.content && !isSpeaking) {
+        if (voiceSettings.voiceEnabled && voiceSettings.autoSpeak && agentMessage.content) {
           setTimeout(() => {
+            console.log('🔊 Auto-speaking fallback agent response (will stop current speech if any)');
             speakText(agentMessage.content);
           }, 500);
         }
