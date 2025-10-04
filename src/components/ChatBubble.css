@@ -436,3 +436,203 @@
     max-width: 120px;
   }
 }
+
+/* Backend Chart Styling - Preserve Original Colors and Styling */
+.backend-chart-container {
+  /* Isolate the chart from global CSS */
+  all: initial;
+  display: block !important;
+  margin: 16px 0 !important;
+  text-align: center !important;
+  padding: 8px !important;
+  background-color: #fafafa !important;
+  border-radius: 8px !important;
+  
+  /* Prevent any color/filter modifications */
+  filter: none !important;
+  isolation: isolate !important;
+  color-scheme: normal !important;
+  
+  /* Reset any inherited styles */
+  font-family: inherit !important;
+  color: inherit !important;
+}
+
+.backend-chart-container img {
+  /* Preserve exact backend chart appearance */
+  max-width: 100% !important;
+  height: auto !important;
+  border-radius: 6px !important;
+  border: 1px solid #e0e0e0 !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+  display: block !important;
+  margin: 0 auto !important;
+  
+  /* Critical: Preserve backend colors and styling */
+  filter: none !important;
+  image-rendering: auto !important;
+  print-color-adjust: exact !important;
+  mix-blend-mode: normal !important;
+  isolation: isolate !important;
+  
+  /* Prevent React/CSS interference */
+  -webkit-filter: none !important;
+  -webkit-image-rendering: auto !important;
+  -webkit-print-color-adjust: exact !important;
+  
+  /* Firefox specific */
+  -moz-print-color-adjust: exact !important;
+  
+  /* Disable any transformations */
+  transform: none !important;
+  -webkit-transform: none !important;
+  -moz-transform: none !important;
+  
+  /* Preserve image quality */
+  image-resolution: from-image !important;
+  object-fit: contain !important;
+  object-position: center !important;
+}
+
+.backend-chart-container figcaption {
+  font-size: 12px !important;
+  color: #666 !important;
+  margin-top: 8px !important;
+  font-style: italic !important;
+  line-height: 1.4 !important;
+  text-align: center !important;
+  font-family: inherit !important;
+}
+
+/* Override any global img styles that might interfere */
+.jzy-chat-content .backend-chart-container img,
+.jzy-agent .backend-chart-container img,
+.jzy-user .backend-chart-container img {
+  /* CRITICAL: Force original chart styling with complete filter reset */
+  filter: none !important;
+  opacity: 1 !important;
+  
+  /* Reset vendor-specific filters */
+  -webkit-filter: none !important;
+  -moz-filter: none !important;
+  
+  /* Prevent any color adjustments */
+  print-color-adjust: exact !important;
+  -webkit-print-color-adjust: exact !important;
+  -moz-print-color-adjust: exact !important;
+  
+  /* Disable blend modes that could affect colors */
+  mix-blend-mode: normal !important;
+  background-blend-mode: normal !important;
+  
+  /* Prevent any transformations */
+  transform: none !important;
+  -webkit-transform: none !important;
+  -moz-transform: none !important;
+  transform-style: flat !important;
+  
+  /* Force container isolation */
+  isolation: isolate !important;
+  contain: style layout paint !important;
+  
+  /* Preserve exact image rendering */
+  image-rendering: -webkit-optimize-contrast !important;
+  image-rendering: -moz-crisp-edges !important;
+  image-rendering: crisp-edges !important;
+  image-rendering: auto !important;
+  
+  /* Additional protection */
+  will-change: auto !important;
+  backface-visibility: visible !important;
+  perspective: none !important;
+  
+  /* Ensure no CSS animations affect the chart */
+  animation: none !important;
+  transition: none !important;
+  
+  /* Reset any potential filter effects */
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Additional protection for matplotlib/seaborn charts */
+.backend-chart-container[data-chart-type*="matplotlib"] img,
+.backend-chart-container[data-chart-type*="seaborn"] img,
+.backend-chart-container[data-chart-type*="plotly"] img,
+.backend-chart-container img[alt*="matplotlib"],
+.backend-chart-container img[alt*="seaborn"],
+.backend-chart-container img[alt*="plotly"] {
+  /* Extra protection for specific backend chart libraries */
+  color-scheme: normal !important;
+}
+
+/* Chart interaction buttons */
+.backend-chart-container:hover .chart-actions {
+  opacity: 1 !important;
+}
+
+.chart-actions {
+  transition: opacity 0.2s ease-in-out;
+}
+
+.chart-action-button {
+  transition: all 0.2s ease-in-out;
+}
+
+.chart-action-button:hover {
+  background-color: rgba(255, 255, 255, 1) !important;
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Chart modal animations */
+.chart-modal {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.chart-modal img {
+  animation: zoomIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes zoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Modal overlay ensures proper stacking */
+.chart-fullscreen-overlay {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Responsive modal adjustments */
+@media (max-width: 768px) {
+  .chart-modal .chart-modal-buttons {
+    top: 10px !important;
+    right: 10px !important;
+  }
+  
+  .chart-modal .chart-modal-buttons button {
+    width: 36px !important;
+    height: 36px !important;
+  }
+  
+  .chart-modal img {
+    max-height: 85vh !important;
+  }
+}

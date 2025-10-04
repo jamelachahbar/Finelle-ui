@@ -18,6 +18,23 @@ interface VoiceSettings {
 }
 
 
+interface ApiResponse {
+  content?: string;
+  role?: string;
+  agent?: string;
+  sources?: string[];
+  citations?: Citation[];
+  chart_included?: boolean;
+  chart?: {
+    image_base64?: string;
+    [key: string]: unknown;
+  };
+  chart_data?: string;
+  chart_format?: string;
+  chart_type?: string;
+  [key: string]: unknown;
+}
+
 type ChatMessage = {
   role: 'user' | 'agent' | 'assistant' | 'system';
   agent: string;
@@ -25,6 +42,9 @@ type ChatMessage = {
   sources?: string[];
   processedContent?: string;
   citations?: Citation[];
+  chartData?: string; // Base64 encoded chart image
+  chartFormat?: string; // e.g., "png_base64"
+  chartType?: string; // e.g., "time_series_anomaly"
 };
 
 const promptSuggestions = [
@@ -295,10 +315,14 @@ export default function ChatWindow() {
     const encodedPrompt = encodeURIComponent(input);
     const baseUrl = import.meta.env.VITE_BACKEND_URL;
     const eventSource = new EventSource(`${baseUrl}/api/ask-stream?prompt=${encodedPrompt}&sessionId=${sessionIdRef.current}`);    eventSource.onmessage = (event) => {
-      console.log('Raw event data:', event.data); // Debug the raw data first
-      console.log('Event data type:', typeof event.data);
+      console.log('🔍 Raw event data received:', event.data); // Debug the raw data first
+      console.log('📊 Event data type:', typeof event.data);
       
-      let data;
+      // Also log the first 200 characters to see structure
+      const preview = typeof event.data === 'string' ? event.data.substring(0, 200) : JSON.stringify(event.data).substring(0, 200);
+      console.log('📝 Event data preview:', preview + '...');
+      
+      let data: ApiResponse;
       try {
         // Handle both string and object responses
         if (typeof event.data === 'string') {
@@ -310,14 +334,29 @@ export default function ChatWindow() {
           return;
         }
         
+        // Raw chart debugging - check if chart data exists at all
+        console.log('🔍 Raw chart debugging:', {
+          rawDataIncludes_chart: event.data.includes('chart'),
+          rawDataIncludes_image_base64: event.data.includes('image_base64'),
+          rawDataIncludes_chart_included: event.data.includes('chart_included'),
+          rawDataLength: event.data.length
+        });
+        
         console.log('API Response Data:', {
           content: data.content?.substring(0, 50) + '...',
           fullContent: data.content, // Add full content for debugging
           hasCitations: data.citations ? true : false,
           citationsCount: data.citations?.length || 0,
-          citationFields: data.citations?.length > 0 ? Object.keys(data.citations[0]) : [],
-          firstCitation: data.citations?.length > 0 ? JSON.stringify(data.citations[0]).substring(0, 100) + '...' : null,
+          citationFields: (data.citations && data.citations.length > 0) ? Object.keys(data.citations[0]) : [],
+          firstCitation: (data.citations && data.citations.length > 0) ? JSON.stringify(data.citations[0]).substring(0, 100) + '...' : null,
           responseProperties: Object.keys(data),
+          // Enhanced chart debugging
+          hasChartIncluded: data.chart_included ? true : false,
+          hasChart: data.chart ? true : false,
+          chartStructure: data.chart ? Object.keys(data.chart) : null,
+          chartImageBase64Length: data.chart?.image_base64?.length || 0,
+          chartFormat: data.chart_format,
+          chartType: data.chart_type
         });
 
         if (data.content === '[DONE]') {
@@ -332,11 +371,58 @@ export default function ChatWindow() {
         console.error('Invalid API response:', data);
         return;
       } // Check if content is present      if (!data.content?.trim()) return;      // Special check for custom tool icons
-      if (data.content.includes('[RESOURCE_GRAPH_ICON]')) {
+      if (data.content?.includes('[RESOURCE_GRAPH_ICON]')) {
         console.log('🎯 Detected Resource Graph Explorer icon replacement marker!');
-      } else if (data.content.includes('[ADX_ICON]')) {
+      } else if (data.content?.includes('[ADX_ICON]')) {
         console.log('🎯 Detected ADX icon replacement marker!');
-      } // Process citations if present
+      } 
+
+      // Check for chart data in the response - try multiple possible structures
+      let chartData = null;
+      
+      // Method 1: Expected structure (chart.image_base64)
+      if (data.chart_included && data.chart && data.chart.image_base64) {
+        console.log('🎨 Chart data detected in response (Method 1 - chart.image_base64):', {
+          chart_included: data.chart_included,
+          chart_format: data.chart_format,
+          chart_size: data.chart.image_base64?.length,
+          chart_type: data.chart_type,
+          chart_structure: Object.keys(data.chart)
+        });
+        chartData = data.chart.image_base64;
+      }
+      // Method 2: Direct chart_data field (fallback)
+      else if (data.chart_included && data.chart_data) {
+        console.log('🎨 Chart data detected in response (Method 2 - chart_data):', {
+          chart_included: data.chart_included,
+          chart_format: data.chart_format,
+          chart_size: data.chart_data?.length,
+          chart_type: data.chart_type
+        });
+        chartData = data.chart_data;
+      }
+      // Method 3: Any base64 data in chart object
+      else if (data.chart && typeof data.chart === 'object') {
+        console.log('🎨 Chart object found, exploring structure:', Object.keys(data.chart));
+        
+        // Look for any base64-like data in the chart object
+        const chartKeys = Object.keys(data.chart);
+        const base64Key = chartKeys.find(key => 
+          typeof data.chart![key] === 'string' && 
+          (data.chart![key] as string).startsWith('iVBORw0KGgo')
+        );
+        
+        if (base64Key) {
+          console.log('🎨 Chart data detected in response (Method 3 - found base64 data):', {
+            key: base64Key,
+            chart_size: (data.chart![base64Key] as string)?.length,
+            chart_preview: (data.chart![base64Key] as string)?.substring(0, 50) + '...'
+          });
+          chartData = data.chart[base64Key];
+        }
+      }
+
+      // Process citations if present
       let processedContent = data.content;
       let citations: Citation[] = [];
 
@@ -345,13 +431,13 @@ export default function ChatWindow() {
       console.log('Citation detection:', {
         hasCitations,
         citationsLength: Array.isArray(data.citations) ? data.citations.length : 'not an array',
-        firstCitationSample: hasCitations ? JSON.stringify(data.citations[0]).substring(0, 80) + '...' : 'none',
+        firstCitationSample: (hasCitations && data.citations) ? JSON.stringify(data.citations[0]).substring(0, 80) + '...' : 'none',
       });
 
       if (hasCitations) {
         try {
-          console.log('Processing citations from API:', data.citations.length, 'first citation:', data.citations[0]); // Use the citations directly rather than trying to parse from content
-          citations = data.citations.map((citation: unknown, index: number) => {
+          console.log('Processing citations from API:', data.citations?.length, 'first citation:', data.citations?.[0]); // Use the citations directly rather than trying to parse from content
+          citations = (data.citations || []).map((citation: unknown, index: number) => {
             // Ensure citation is an object before spreading
             const citationObj = typeof citation === 'object' && citation !== null ? citation : {};
 
@@ -395,12 +481,16 @@ export default function ChatWindow() {
         }
       } // Create message with correct structure for proper citation handling
       const msg: ChatMessage = {
-        role: data.role || 'agent',
+        role: (data.role as 'user' | 'agent' | 'assistant' | 'system') || 'agent',
         agent: data.agent || 'Haris',
-        content: processedContent,
+        content: processedContent || '',
         sources: data.sources || [],
         // Ensure citations are explicitly set if available
         citations: citations && citations.length > 0 ? citations : undefined,
+        // Add chart data if available
+        chartData: chartData as string,
+        chartFormat: data.chart_format,
+        chartType: data.chart_type,
       };
 
       // Create a final check to ensure citations are included in the message
@@ -408,11 +498,11 @@ export default function ChatWindow() {
       if (msg.citations === undefined && hasCitations) {
         console.log('Citations were found in data but not properly processed - fixing', {
           citationsInMsg: msg.citations ? 'present' : 'undefined',
-          citationsInData: hasCitations ? data.citations.length : 0,
+          citationsInData: (hasCitations && data.citations) ? data.citations.length : 0,
         });
 
         // Process citations thoroughly to ensure complete information
-        msg.citations = processCitations(data.citations);
+        msg.citations = processCitations((data.citations || []) as unknown as Record<string, unknown>[]);
       }
 
       // Final legacy citation check
@@ -640,6 +730,9 @@ export default function ChatWindow() {
                     onSpeak={speakText}
                     onStopSpeaking={stopSpeaking}
                     isSpeaking={isSpeaking}
+                    chartData={msg.chartData}
+                    chartFormat={msg.chartFormat}
+                    chartType={msg.chartType}
                   />
                   {/* Debug info - only show in development */}
                   {process.env.NODE_ENV === 'development' && msg.citations && msg.citations.length > 0 && (
@@ -657,6 +750,9 @@ export default function ChatWindow() {
                   onSpeak={speakText}
                   onStopSpeaking={stopSpeaking}
                   isSpeaking={isSpeaking}
+                  chartData={msg.chartData}
+                  chartFormat={msg.chartFormat}
+                  chartType={msg.chartType}
                 />
               );            })}
             {isTyping && <TypingBubble message={typingMessage} />}
