@@ -60,6 +60,7 @@ const promptSuggestions = [
   'Run a comprehensive anomaly analysis on [SERVICE or COST DIMENSION] for the last 20 days. Use both Isolation Forest and Level Shift methods.Present a clear table showing which dates are anomalies, which method flagged them, and a concise summary/conclusion of the findings.',
   'Show all Azure reservation purchases since 2024, including term, months elapsed, months remaining, and monthly payment, and provide a CSV export.',
   //   "Which resources are eligible for savings plans or reservations but aren’t covered?",
+  'Show me the top 10 individual Azure resources with the largest decrease in cost from July to September (ignore October since it’s not a full month). For each, display the cost in July, August, and September, and the total change from July to September. Present the results in a markdown table and highlight any resources that went to zero. Also, provide a brief insight on what might have driven these changes and suggest next steps for further optimization.',
   'For my highest-cost resources with no discounts, recommend which type of Azure discount (reservation, savings plan, or negotiated) I should apply to each resource.',
   'Which of my high-cost virtual machines and SQL databases are eligible for reservations or savings plans, and what should I do?',
   'For each resource in my top 20 by cost with no discounts, tell me if it’s eligible for a reservation, savings plan, or negotiated discount, and what action I should take.',
@@ -314,7 +315,18 @@ export default function ChatWindow() {
     setIsTyping(true);
     const encodedPrompt = encodeURIComponent(input);
     const baseUrl = import.meta.env.VITE_BACKEND_URL;
-    const eventSource = new EventSource(`${baseUrl}/api/ask-stream?prompt=${encodedPrompt}&sessionId=${sessionIdRef.current}`);    eventSource.onmessage = (event) => {
+    
+    let eventSource: EventSource | null = null;
+    
+    try {
+      eventSource = new EventSource(`${baseUrl}/api/ask-stream?prompt=${encodedPrompt}&sessionId=${sessionIdRef.current}`);
+    } catch (error) {
+      console.error('❌ Failed to create EventSource:', error);
+      setIsTyping(false);
+      return;
+    }
+
+    eventSource.onmessage = (event) => {
       console.log('🔍 Raw event data received:', event.data); // Debug the raw data first
       console.log('📊 Event data type:', typeof event.data);
       
@@ -362,15 +374,32 @@ export default function ChatWindow() {
         if (data.content === '[DONE]') {
           setIsTyping(false);
           setTypingMessage('');
-        eventSource.close();
-        return;
-      }
+          
+          // Safely close the connection
+          try {
+            if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
+              eventSource.close();
+            }
+          } catch (closeError) {
+            console.warn('EventSource already closed on DONE:', closeError);
+          }
+          return;
+        }
 
       // Validate API response structure
       if (!data || typeof data !== 'object') {
         console.error('Invalid API response:', data);
         return;
-      } // Check if content is present      if (!data.content?.trim()) return;      // Special check for custom tool icons
+      }
+
+      // Check if we have either content OR chart data - don't skip chart-only messages
+      const hasContent = data.content?.trim();
+      const hasChartData = data.chart_included || data.chart || data.chart_data;
+      
+      if (!hasContent && !hasChartData) {
+        console.log('⏭️ Skipping message - no content or chart data');
+        return;
+      }      // Special check for custom tool icons
       if (data.content?.includes('[RESOURCE_GRAPH_ICON]')) {
         console.log('🎯 Detected Resource Graph Explorer icon replacement marker!');
       } else if (data.content?.includes('[ADX_ICON]')) {
@@ -590,15 +619,27 @@ export default function ChatWindow() {
     eventSource.onerror = (err) => {
       console.error('❌ Stream error:', err);
       setIsTyping(false);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'agent',
-          agent: 'Haris',
-          content: '⚠️ Something went wrong. Please try again or check the server.',
-        },
-      ]);
-      eventSource.close();
+      
+      // Check if EventSource is still open before adding error message
+      if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'agent',
+            agent: 'Haris',
+            content: '⚠️ Something went wrong. Please try again or check the server.',
+          },
+        ]);
+      }
+      
+      // Safely close the connection
+      try {
+        if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
+          eventSource.close();
+        }
+      } catch (closeError) {
+        console.warn('EventSource already closed:', closeError);
+      }
     };
 
     setInput('');

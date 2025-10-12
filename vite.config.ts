@@ -18,7 +18,6 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: env.VITE_BACKEND_URL || 'http://127.0.0.1:8000',
           changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/api/, ''),
         },
       },
     },

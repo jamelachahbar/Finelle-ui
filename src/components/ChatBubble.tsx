@@ -283,16 +283,25 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
     // Add all detected image URLs (these come from backend tools like matplotlib)
     uniqueImageUrls.forEach((imageUrl, index) => {
       const isBase64 = imageUrl.startsWith('data:image/');
+      const needsProxy = !isBase64 && !imageUrl.includes(window.location.hostname);
+      
       const urlType = isBase64 ? 'base64' : 
                      imageUrl.includes('mdn.alipayobjects.com') ? 'CDN' :
                      imageUrl.includes('blob.core.windows.net') ? 'Azure' :
                      imageUrl.includes('amazonaws.com') ? 'AWS' :
-                     imageUrl.includes('googleapis.com') ? 'Google Cloud' : 'Direct URL';
+                     imageUrl.includes('googleapis.com') ? 'Google Cloud' : 
+                     imageUrl.includes('microsoft.com') ? 'Microsoft Docs' : 'Direct URL';
       
-      console.log(`📊 Adding backend chart ${index + 1} (${urlType}):`, imageUrl.substring(0, 100) + '...');
+      console.log(`📊 Adding backend chart ${index + 1} (${urlType}, proxy: ${needsProxy}):`, imageUrl.substring(0, 100) + '...');
+      
+      // Use proxy for external URLs to avoid CORS issues
+      const finalUrl = needsProxy 
+        ? `/api/proxy/image?url=${encodeURIComponent(imageUrl)}`
+        : imageUrl;
+      
       images.push({
         alt: `Chart ${index + 1} (${urlType})`,
-        src: imageUrl
+        src: finalUrl
       });
     });
     
