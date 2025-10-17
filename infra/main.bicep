@@ -19,6 +19,9 @@ param location string = 'eastus2'
 @description('A unique token to ensure resource names are globally unique')
 param resourceToken string = toLower(uniqueString(subscription().id, resourceGroup().id, location, environmentName))
 
+@description('The backend API URL - can be overridden via azd environment or Azure portal')
+param backendUrl string = ''
+
 @description('Tags applied to all resources')
 param tags object = {
   project: projectName
@@ -209,6 +212,18 @@ module containerApp 'br/public:avm/res/app/container-app:0.11.0' = {
             name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
             value: applicationInsights.outputs.instrumentationKey
           }
+          {
+            name: 'VITE_BACKEND_URL'
+            value: backendUrl
+          }
+          {
+            name: 'VITE_APPINSIGHTS_CONNECTION_STRING'
+            value: applicationInsights.outputs.connectionString
+          }
+          {
+            name: 'VITE_ALLOWED_HOSTS'
+            value: containerAppName
+          }
         ]
       }
     ]
@@ -297,3 +312,6 @@ output applicationInsightsConnectionString string = applicationInsights.outputs.
 
 @description('The Application Insights instrumentation key')
 output applicationInsightsInstrumentationKey string = applicationInsights.outputs.instrumentationKey
+
+@description('The backend API URL')
+output backendUrl string = backendUrl

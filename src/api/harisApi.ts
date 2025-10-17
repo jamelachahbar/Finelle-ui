@@ -1,7 +1,9 @@
 import axios from "axios";
 
 // Base URL for the backend API - use environment variable or fallback
-const BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+import env from '../config/env';
+
+const BASE_URL = env.BACKEND_URL || "http://localhost:8000";
 
 export const askHaris = async (prompt: string) => {
   const response = await axios.post(`${BASE_URL}/ask`, { prompt });

@@ -13,7 +13,6 @@ infra:
     containerRegistryName: containerRegistryName
     containerAppFQDN: containerAppFQDN
     AZURE_CONTAINER_REGISTRY_ENDPOINT: containerRegistryLoginServer
-    AZURE_APPLICATION_INSIGHTS_CONNECTION_STRING: applicationInsightsConnectionString
 
 # Services configuration
 services:
@@ -26,100 +25,27 @@ services:
       path: ./Dockerfile
       context: .
       registry: ${AZURE_CONTAINER_REGISTRY_ENDPOINT}
+      buildArgs:
+        - VITE_APPINSIGHTS_CONNECTION_STRING=${applicationInsightsConnectionString}
+        - VITE_BACKEND_URL=${backendUrl}
+    env:
+      VITE_APPINSIGHTS_CONNECTION_STRING: ${applicationInsightsConnectionString}
+      VITE_BACKEND_URL: ${backendUrl}
 # Hooks for deployment lifecycle
 hooks:
   predeploy:
     windows:
       shell: pwsh
       run: |
-        echo "Starting pre-deployment checks..."
-        
-        # Get current azd environment name
-        $envName = azd env get-value AZURE_ENV_NAME
-        if ([string]::IsNullOrEmpty($envName)) {
-          $envName = "production"
-          echo "⚠️  No AZURE_ENV_NAME found, defaulting to 'production'"
-        }
-        
-        $envFile = ".env.$envName"
-        echo "Creating $envFile with current Application Insights connection string..."
-        
-        # Get connection string from azd environment
-        $connectionString = azd env get-value applicationInsightsConnectionString
-        if ([string]::IsNullOrEmpty($connectionString)) {
-          echo "❌ No connection string found in azd environment"
-          echo "Please ensure Application Insights is deployed and azd environment is current"
-          exit 1
-        }
-        
-        # Create environment-specific .env file
-        "VITE_APPINSIGHTS_CONNECTION_STRING=$connectionString" | Out-File -FilePath $envFile -Encoding utf8
-        echo "✅ Created $envFile with current connection string"
-        echo "Connection string length: $($connectionString.Length)"
-        echo "Connection string preview: $($connectionString.Substring(0, 50))..."
-        
-        # Also create .env.production for Vite build process (always needed for production builds)
-        "VITE_APPINSIGHTS_CONNECTION_STRING=$connectionString" | Out-File -FilePath ".env.production" -Encoding utf8
-        echo "✅ Also created .env.production for Vite build process"
-        
-        # Verify files were created
-        if (Test-Path $envFile) {
-          echo "✅ $envFile file verified"
-          Get-Content $envFile | Write-Host
-        } else {
-          echo "❌ Failed to create $envFile file"
-          exit 1
-        }
-        
-        echo "Building React application..."
-        npm run build
-        
-        echo "Verifying connection string is in built files..."
-        $jsFiles = Get-ChildItem -Path "dist/assets" -Filter "*.js" -Recurse
-        $found = $false
-        foreach ($file in $jsFiles) {
-          $content = Get-Content $file.FullName -Raw
-          if ($content -match "InstrumentationKey") {
-            echo "✅ Connection string found in $($file.Name)"
-            $found = $true
-            break
-          }
-        }
-        if (-not $found) {
-          echo "❌ Connection string NOT found in any JS files"
-          echo "Available JS files:"
-          $jsFiles | ForEach-Object { echo "  $($_.Name)" }
-        }
-        
-        echo "🚀 Using image upsert technique for fast deployment..."
-        echo "Infrastructure will provision with placeholder image first"
-        echo "Custom image will be built and updated during deploy phase"
+        echo "🎉 Using azd built-in environment variable substitution!"
+        echo "Environment variables will be automatically passed to Docker build and runtime"
+        echo "AZURE_APPLICATION_INSIGHTS_CONNECTION_STRING: $(azd env get-value applicationInsightsConnectionString)"
+        echo "AZURE_BACKEND_URL: $(azd env get-value backendUrl)"
     posix:
       shell: sh
       run: |
-        echo "Starting pre-deployment checks..."
-        echo "Using connection string from .env.production file..."
-        
-        # Check if .env.production exists
-        if [ -f ".env.production" ]; then
-          echo "✅ Found .env.production file"
-          cat .env.production
-          
-          # Source the .env.production file to load variables
-          export $(grep -v '^#' .env.production | xargs)
-          echo "✅ Environment variables loaded from .env.production"
-        else
-          echo "❌ No .env.production file found"
-          echo "Please ensure .env.production exists with VITE_APPINSIGHTS_CONNECTION_STRING"
-          exit 1
-        fi
-        
-        echo "Building React application..."
-        npm run build
-        
-        echo "🚀 Using image upsert technique for fast deployment..."
-        echo "Infrastructure will provision with placeholder image first"
-        echo "Custom image will be built and updated during deploy phase"
+        echo "🎉 Using azd built-in environment variable substitution!"
+        echo "Environment variables will be automatically passed to Docker build and runtime"
   postdeploy:
     windows:
       shell: pwsh

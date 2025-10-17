@@ -1,11 +1,12 @@
 import { ApplicationInsights } from '@microsoft/applicationinsights-web';
 import { ReactPlugin } from '@microsoft/applicationinsights-react-js';
+import env from '../config/env';
 
 // Create React plugin for Application Insights
 const reactPlugin = new ReactPlugin();
 
-// Get connection string from environment variable
-const connectionString = import.meta.env.VITE_APPINSIGHTS_CONNECTION_STRING;
+// Get connection string from runtime config (allows changing in Azure portal)
+const connectionString = env.APPINSIGHTS_CONNECTION_STRING;
 
 // Debug logging
 console.log('🔍 Application Insights Debug:');

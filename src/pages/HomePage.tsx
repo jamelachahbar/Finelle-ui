@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { trackEvent, trackPageView, trackTrace } from "../utils/applicationInsights";
 import { speechService } from "../services/speechService";
 import HarisLogo from '../assets/Harislogo.png';
+import env from '../config/env';
 
 interface VoiceSettings {
   voiceEnabled: boolean;
@@ -98,18 +99,19 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    // Track page load
+    // Track page load (now uses runtime config)
     console.log('🔍 Environment Variable Debug:');
-    console.log('VITE_APPINSIGHTS_CONNECTION_STRING present:', !!import.meta.env.VITE_APPINSIGHTS_CONNECTION_STRING);
-    console.log('Connection string length:', import.meta.env.VITE_APPINSIGHTS_CONNECTION_STRING?.length || 0);
+    console.log('VITE_APPINSIGHTS_CONNECTION_STRING present:', !!env.APPINSIGHTS_CONNECTION_STRING);
+    console.log('Connection string length:', env.APPINSIGHTS_CONNECTION_STRING?.length || 0);
+    console.log('VITE_BACKEND_URL:', env.BACKEND_URL);
     console.log('All available env vars:', Object.keys(import.meta.env));
     
     trackPageView('HomePage', window.location.href);
     trackEvent('HomePage_Loaded', {
       userAgent: navigator.userAgent,
       referrer: document.referrer || 'direct',
-      hasConnectionString: import.meta.env.VITE_APPINSIGHTS_CONNECTION_STRING ? 'true' : 'false',
-      connectionStringLength: String(import.meta.env.VITE_APPINSIGHTS_CONNECTION_STRING?.length || 0)
+      hasConnectionString: env.APPINSIGHTS_CONNECTION_STRING ? 'true' : 'false',
+      connectionStringLength: String(env.APPINSIGHTS_CONNECTION_STRING?.length || 0)
     });
     trackTrace('HomePage component mounted successfully');
 

@@ -6,6 +6,7 @@ import './ChatWindow.css';
 import { Send24Regular, Mic24Regular, MicOff24Regular } from '@fluentui/react-icons';
 import { Citation, formatCitationsForMarkdown } from '../utils/citationUtils';
 import { speechService } from '../services/speechService';
+import env from '../config/env';
 
 interface VoiceSettings {
   voiceEnabled: boolean;
@@ -314,7 +315,7 @@ export default function ChatWindow() {
 
     setIsTyping(true);
     const encodedPrompt = encodeURIComponent(input);
-    const baseUrl = import.meta.env.VITE_BACKEND_URL;
+    const baseUrl = env.BACKEND_URL;
     
     let eventSource: EventSource | null = null;
     

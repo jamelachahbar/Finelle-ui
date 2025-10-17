@@ -7,15 +7,16 @@ import {
   trackMetric, 
   trackPageView 
 } from "../utils/applicationInsights";
+import env from "../config/env";
 
 export default function TelemetryTest() {
   const [testResults, setTestResults] = useState<string[]>([]);
   const [isConnected, setIsConnected] = useState<boolean>(false);
 
   useEffect(() => {
-    // Check if Application Insights is properly configured
-    const hasConnectionString = !!import.meta.env.VITE_APPINSIGHTS_CONNECTION_STRING;
-    const connectionStringValue = import.meta.env.VITE_APPINSIGHTS_CONNECTION_STRING;
+    // Check if Application Insights is properly configured (now uses runtime config)
+    const hasConnectionString = !!env.APPINSIGHTS_CONNECTION_STRING;
+    const connectionStringValue = env.APPINSIGHTS_CONNECTION_STRING;
     
     setIsConnected(hasConnectionString);
     
