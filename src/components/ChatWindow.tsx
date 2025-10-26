@@ -315,12 +315,44 @@ export default function ChatWindow() {
 
     setIsTyping(true);
     const encodedPrompt = encodeURIComponent(input);
-    const baseUrl = env.BACKEND_URL;
+    
+    // In development mode, use relative URLs to work with Vite proxy
+    // In production, use the configured backend URL
+    const isDevelopment = import.meta.env.DEV;
+    const baseUrl = isDevelopment ? '' : env.BACKEND_URL;
+    
+    console.log('🔍 Chat environment debug:', {
+      isDevelopment,
+      envBackendUrl: env.BACKEND_URL,
+      baseUrl: baseUrl || '(relative URLs for proxy)',
+      windowEnv: window._env_
+    });
     
     let eventSource: EventSource | null = null;
     
     try {
-      eventSource = new EventSource(`${baseUrl}/api/ask-stream?prompt=${encodedPrompt}&sessionId=${sessionIdRef.current}`);
+      const eventSourceUrl = `${baseUrl}/api/ask-stream?prompt=${encodedPrompt}&sessionId=${sessionIdRef.current}`;
+      console.log('🔍 Creating EventSource with URL:', eventSourceUrl);
+      
+      eventSource = new EventSource(eventSourceUrl);
+      
+      // Add error handling for EventSource
+      eventSource.onerror = (error) => {
+        console.error('❌ EventSource error:', error);
+        console.error('❌ EventSource readyState:', eventSource?.readyState);
+        console.error('❌ EventSource URL was:', eventSourceUrl);
+        
+        // EventSource readyState values: 0 = CONNECTING, 1 = OPEN, 2 = CLOSED
+        const stateNames = ['CONNECTING', 'OPEN', 'CLOSED'];
+        console.error('❌ EventSource state:', stateNames[eventSource?.readyState || 0]);
+        
+        setIsTyping(false);
+      };
+      
+      eventSource.onopen = () => {
+        console.log('✅ EventSource connection opened successfully');
+      };
+      
     } catch (error) {
       console.error('❌ Failed to create EventSource:', error);
       setIsTyping(false);

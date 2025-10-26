@@ -23,6 +23,7 @@ services:
     host: containerapp
     docker:
       path: ./Dockerfile
+      remoteBuild: true
       context: .
       registry: ${AZURE_CONTAINER_REGISTRY_ENDPOINT}
       buildArgs:

@@ -19,10 +19,9 @@ export interface SpeechSynthesisOptions {
 }
 
 export interface BackendVoice {
-  name: string;
-  gender: string;
-  locale: string;
-  shortName: string;
+  name: string;    // This is the voice ID like "en-US-AriaNeural"
+  gender: string;  // This is "Female" or "Male"
+  locale: string;  // This is "en-US"
 }
 
 export interface SpeechToSpeechResponse {
@@ -81,8 +80,47 @@ class SpeechService {
   private currentAbortController: AbortController | null = null;
 
   constructor(baseURL?: string) {
-    this.baseURL = baseURL || BASE_URL;
+    // In development mode, use relative URLs to work with Vite proxy
+    // In production, use the provided baseURL or the imported BASE_URL
+    const isDevelopment = import.meta.env.DEV;
+    
+    // Debug environment variables in production
+    console.log('🔧 Speech service environment debug:', {
+      isDevelopment,
+      providedBaseURL: baseURL,
+      importedBASE_URL: BASE_URL,
+      windowEnv: window._env_,
+      importMetaEnvDev: import.meta.env.DEV,
+      importMetaEnvViteBackendUrl: import.meta.env.VITE_BACKEND_URL
+    });
+    
+    if (isDevelopment && !baseURL) {
+      this.baseURL = ''; // Use relative URLs for proxy
+      console.log('🔧 Speech service using relative URLs for development proxy');
+    } else {
+      this.baseURL = baseURL || BASE_URL;
+      console.log('🔧 Speech service using base URL:', this.baseURL);
+    }
+    
+    // In production, if we don't have a valid baseURL and window._env_ exists, reinitialize
+    if (!isDevelopment && (!this.baseURL || this.baseURL === 'http://localhost:8000') && window._env_?.VITE_BACKEND_URL) {
+      console.log('🔄 Reinitializing speech service with runtime environment');
+      this.baseURL = window._env_.VITE_BACKEND_URL;
+      console.log('🔧 Updated speech service base URL:', this.baseURL);
+    }
+    
     this.initializeBrowserApis();
+  }
+  
+  /**
+   * Reinitialize the base URL after runtime environment is loaded
+   */
+  private reinitializeBaseURL() {
+    const isDevelopment = import.meta.env.DEV;
+    if (!isDevelopment && window._env_?.VITE_BACKEND_URL) {
+      this.baseURL = window._env_.VITE_BACKEND_URL;
+      console.log('🔄 Speech service base URL updated to:', this.baseURL);
+    }
   }
 
   private generateSessionId(): string {
@@ -236,6 +274,9 @@ class SpeechService {
    * Synthesize speech using backend Azure Speech Services
    */
   private async synthesizeWithBackend(text: string, voice: string): Promise<void> {
+    // Ensure we have the correct base URL from runtime environment
+    this.reinitializeBaseURL();
+    
     // Cancel any existing request
     if (this.currentAbortController) {
       this.currentAbortController.abort();
@@ -375,6 +416,9 @@ class SpeechService {
    * Get available voices from backend
    */
   private async getBackendVoices(): Promise<BackendVoice[]> {
+    // Ensure we have the correct base URL from runtime environment
+    this.reinitializeBaseURL();
+    
     if (this.availableVoices.length > 0) {
       return this.availableVoices;
     }
@@ -385,7 +429,34 @@ class SpeechService {
     }
 
     const result = await response.json();
-    this.availableVoices = result.voices;
+    
+    // Process and validate voices to handle cases where backend returns display names
+    const processedVoices = result.voices?.map((voice: { name: string; gender?: string; locale?: string }) => {
+      // If the name field contains display text, try to extract or map to actual voice ID
+      let processedName = voice.name;
+      
+      // Check if this looks like a display name rather than a voice ID
+      if (voice.name && (voice.name.includes('Microsoft') || voice.name.includes('(Natural)'))) {
+        console.warn('⚠️ Backend returned display name instead of voice ID:', voice.name);
+        
+        // Try to extract voice ID from display name patterns
+        // This is a fallback - the backend should be fixed to return proper voice IDs
+        if (voice.name.includes('Aria')) processedName = 'en-US-AriaNeural';
+        else if (voice.name.includes('Liam') && voice.name.includes('Canada')) processedName = 'en-CA-LiamNeural';
+        else if (voice.name.includes('Brian') && voice.name.includes('United States')) processedName = 'en-US-BrianMultilingualNeural';
+        // Add more mappings as needed
+        
+        console.log('🔧 Mapped display name to voice ID:', { original: voice.name, mapped: processedName });
+      }
+      
+      return {
+        name: processedName,
+        gender: voice.gender || 'Unknown',
+        locale: voice.locale || 'Unknown'
+      };
+    }) || [];
+    
+    this.availableVoices = processedVoices;
     return this.availableVoices;
   }
 

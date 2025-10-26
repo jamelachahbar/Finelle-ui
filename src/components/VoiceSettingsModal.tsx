@@ -73,6 +73,21 @@ export default function VoiceSettingsModal({ trigger, onSettingsChange }: VoiceS
       newSettings.selectedVoice = '';
     }
     
+    // Debug voice selection and validate it's not a display name
+    if (key === 'selectedVoice' && typeof value === 'string') {
+      console.log(`🎤 Voice selection changed:`, {
+        provider: settings.provider,
+        oldVoice: settings.selectedVoice,
+        newVoice: value,
+        isDisplayName: value.includes('Microsoft') || value.includes('(Natural)') || value.includes('undefined')
+      });
+      
+      // Warn if the selected voice looks like a display name
+      if (settings.provider === 'backend' && (value.includes('Microsoft') || value.includes('(Natural)') || value.includes('undefined'))) {
+        console.warn('⚠️ Voice selection appears to be a display name, not a voice ID:', value);
+      }
+    }
+    
     setSettings(newSettings);
   }, [settings]);
 
@@ -84,14 +99,35 @@ export default function VoiceSettingsModal({ trigger, onSettingsChange }: VoiceS
       const voices = await speechService.getAvailableVoices();
       setAvailableVoices(voices);
       
-      console.log(`🎤 Loaded ${voices.length} voices for ${settings.provider} provider:`, voices);
+      console.log(`🎤 Loaded ${voices.length} voices for ${settings.provider} provider:`);
+      
+      // Debug the first few voices to see the structure
+      if (settings.provider === 'backend' && voices.length > 0) {
+        console.log('🎤 First 3 backend voices:', voices.slice(0, 3));
+        voices.slice(0, 3).forEach((voice, index) => {
+          const backendVoice = voice as BackendVoice;
+          console.log(`🎤 Voice ${index + 1}:`, {
+            name: backendVoice.name,
+            locale: backendVoice.locale,
+            gender: backendVoice.gender,
+            nameType: typeof backendVoice.name,
+            localeType: typeof backendVoice.locale
+          });
+        });
+      }
       
       // Auto-select default voice if none selected or if switching providers
       if (!settings.selectedVoice && voices.length > 0) {
         let defaultVoice = '';
         if (settings.provider === 'backend') {
-          const ariaVoice = (voices as BackendVoice[]).find(v => v.shortName === 'en-US-AriaNeural');
-          defaultVoice = ariaVoice?.shortName || (voices[0] as BackendVoice).shortName;
+          // Look for a common English voice, fallback to first voice
+          const ariaVoice = (voices as BackendVoice[]).find(v => 
+            v.name?.includes('AriaNeural') || v.name === 'en-US-AriaNeural'
+          );
+          const anyEnglishVoice = (voices as BackendVoice[]).find(v => 
+            v.name?.startsWith('en-') || v.locale?.startsWith('en')
+          );
+          defaultVoice = ariaVoice?.name || anyEnglishVoice?.name || (voices[0] as BackendVoice).name;
           console.log(`🎯 Auto-selected backend voice: ${defaultVoice}`);
         } else {
           const browserVoices = voices as SpeechSynthesisVoice[];
@@ -190,10 +226,27 @@ export default function VoiceSettingsModal({ trigger, onSettingsChange }: VoiceS
       >
         {availableVoices.map((voice) => {
           const isBackendVoice = settings.provider === 'backend';
-          const voiceId = isBackendVoice ? (voice as BackendVoice).shortName : (voice as SpeechSynthesisVoice).name;
-          const voiceName = isBackendVoice 
-            ? `${(voice as BackendVoice).name} (${(voice as BackendVoice).locale})`
-            : `${(voice as SpeechSynthesisVoice).name} (${(voice as SpeechSynthesisVoice).lang})`;
+          const voiceId = isBackendVoice ? (voice as BackendVoice).name : (voice as SpeechSynthesisVoice).name;
+          
+          let voiceName: string;
+          if (isBackendVoice) {
+            const backendVoice = voice as BackendVoice;
+            // Handle cases where locale might be undefined
+            const localeInfo = backendVoice.locale ? ` (${backendVoice.locale})` : '';
+            const genderInfo = backendVoice.gender ? ` - ${backendVoice.gender}` : '';
+            voiceName = `${backendVoice.name}${localeInfo}${genderInfo}`;
+            
+            // Debug log to see what we're getting from the backend
+            console.log('🎤 Backend voice data:', {
+              name: backendVoice.name,
+              locale: backendVoice.locale,
+              gender: backendVoice.gender,
+              constructedName: voiceName
+            });
+          } else {
+            const browserVoice = voice as SpeechSynthesisVoice;
+            voiceName = `${browserVoice.name} (${browserVoice.lang})`;
+          }
           
           return (
             <Option key={voiceId} value={voiceId}>
