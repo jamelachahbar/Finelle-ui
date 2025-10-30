@@ -6,6 +6,7 @@ import './ChatWindow.css';
 import { Send24Regular, Mic24Regular, MicOff24Regular } from '@fluentui/react-icons';
 import { Citation, formatCitationsForMarkdown } from '../utils/citationUtils';
 import { speechService } from '../services/speechService';
+import { sendMemoryFeedback } from '../api/harisApi';
 import env from '../config/env';
 
 interface VoiceSettings {
@@ -37,6 +38,7 @@ interface ApiResponse {
 }
 
 type ChatMessage = {
+  id?: string;
   role: 'user' | 'agent' | 'assistant' | 'system';
   agent: string;
   content: string;
@@ -46,6 +48,10 @@ type ChatMessage = {
   chartData?: string; // Base64 encoded chart image
   chartFormat?: string; // e.g., "png_base64"
   chartType?: string; // e.g., "time_series_anomaly"
+  fromCache?: boolean; // Indicates if response came from memory cache
+  feedbackGiven?: 'positive' | 'negative' | null; // Track user feedback
+  userQuestion?: string; // Store original question for feedback API
+  timestamp?: Date;
 };
 
 const promptSuggestions = [
@@ -300,13 +306,55 @@ export default function ChatWindow() {
     setIsSpeaking(false);
     console.log('✅ Speech stopped and state reset');
   };
+
+  // Handle memory feedback
+  const handleFeedback = async (messageId: string, isAccurate: boolean) => {
+    try {
+      // Find the message to get the user question
+      const message = messages.find(msg => msg.id === messageId);
+      if (!message || !message.userQuestion) {
+        console.error('❌ Message or user question not found for feedback');
+        return;
+      }
+
+      console.log('📝 Sending memory feedback:', {
+        messageId,
+        question: message.userQuestion,
+        isAccurate,
+        sessionId: sessionIdRef.current
+      });
+
+      // Send feedback to backend
+      await sendMemoryFeedback(
+        message.userQuestion,
+        sessionIdRef.current,
+        isAccurate
+      );
+
+      // Update message to reflect feedback given
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, feedbackGiven: isAccurate ? 'positive' : 'negative' }
+          : msg
+      ));
+
+      console.log('✅ Memory feedback sent successfully');
+    } catch (error) {
+      console.error('❌ Failed to send memory feedback:', error);
+    }
+  };
+
   const handleSend = async () => {
-    if (!input.trim() || isTyping || isSpeaking) return;    setMessages((prev) => [
+    if (!input.trim() || isTyping || isSpeaking) return;
+
+    const userQuestion = input.trim(); // Store the question for memory tracking
+    
+    setMessages((prev) => [
       ...prev,
       {
         role: 'user',
         agent: 'You',
-        content: input,
+        content: userQuestion,
       },
     ]);    // Auto-scroll to bottom after sending message
     setTimeout(() => {
@@ -314,7 +362,7 @@ export default function ChatWindow() {
     }, 100);
 
     setIsTyping(true);
-    const encodedPrompt = encodeURIComponent(input);
+    const encodedPrompt = encodeURIComponent(userQuestion);
     
     // In development mode, use relative URLs to work with Vite proxy
     // In production, use the configured backend URL
@@ -329,6 +377,7 @@ export default function ChatWindow() {
     });
     
     let eventSource: EventSource | null = null;
+    let receivedMessage = false; // Track if we got at least one message
     
     try {
       const eventSourceUrl = `${baseUrl}/api/ask-stream?prompt=${encodedPrompt}&sessionId=${sessionIdRef.current}`;
@@ -360,6 +409,7 @@ export default function ChatWindow() {
     }
 
     eventSource.onmessage = (event) => {
+      receivedMessage = true; // Mark that we received a message
       console.log('🔍 Raw event data received:', event.data); // Debug the raw data first
       console.log('📊 Event data type:', typeof event.data);
       
@@ -542,7 +592,12 @@ export default function ChatWindow() {
           processedContent = data.content;
         }
       } // Create message with correct structure for proper citation handling
+      // Check if response is from cache (backend may include from_cache flag or marker)
+      const isFromCache = data.from_cache === true || 
+                          (typeof data.content === 'string' && data.content.includes('📚 *From memory:*'));
+      
       const msg: ChatMessage = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // Generate unique ID
         role: (data.role as 'user' | 'agent' | 'assistant' | 'system') || 'agent',
         agent: data.agent || 'Haris',
         content: processedContent || '',
@@ -553,6 +608,10 @@ export default function ChatWindow() {
         chartData: chartData as string,
         chartFormat: data.chart_format,
         chartType: data.chart_type,
+        // Memory tracking fields
+        fromCache: isFromCache,
+        userQuestion: userQuestion, // Associate with the user's question
+        timestamp: new Date(),
       };
 
       // Create a final check to ensure citations are included in the message
@@ -653,8 +712,10 @@ export default function ChatWindow() {
       console.error('❌ Stream error:', err);
       setIsTyping(false);
       
-      // Check if EventSource is still open before adding error message
-      if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
+      // Only show error message if we haven't received any messages
+      // (For cached responses, the stream closes immediately after sending the message)
+      if (!receivedMessage && eventSource && eventSource.readyState !== EventSource.CLOSED) {
+        console.error('❌ EventSource error - no messages received');
         setMessages((prev) => [
           ...prev,
           {
@@ -663,6 +724,8 @@ export default function ChatWindow() {
             content: '⚠️ Something went wrong. Please try again or check the server.',
           },
         ]);
+      } else if (receivedMessage) {
+        console.log('✅ EventSource closed after receiving message (expected for cached responses)');
       }
       
       // Safely close the connection
@@ -796,6 +859,7 @@ export default function ChatWindow() {
               return msg.role === 'agent' || msg.role === 'assistant' ? (
                 <div key={idx}>
                   <ChatBubble 
+                    id={msg.id}
                     role={msg.role} 
                     agent={msg.agent} 
                     content={processedContent} 
@@ -807,6 +871,9 @@ export default function ChatWindow() {
                     chartData={msg.chartData}
                     chartFormat={msg.chartFormat}
                     chartType={msg.chartType}
+                    fromCache={msg.fromCache}
+                    feedbackGiven={msg.feedbackGiven}
+                    onFeedback={handleFeedback}
                   />
                   {/* Debug info - only show in development */}
                   {process.env.NODE_ENV === 'development' && msg.citations && msg.citations.length > 0 && (
@@ -815,7 +882,8 @@ export default function ChatWindow() {
                 </div>
               ) : (
                 <ChatBubble 
-                  key={idx} 
+                  key={idx}
+                  id={msg.id}
                   role={msg.role} 
                   agent={msg.agent} 
                   content={processedContent} 
@@ -827,6 +895,9 @@ export default function ChatWindow() {
                   chartData={msg.chartData}
                   chartFormat={msg.chartFormat}
                   chartType={msg.chartType}
+                  fromCache={msg.fromCache}
+                  feedbackGiven={msg.feedbackGiven}
+                  onFeedback={handleFeedback}
                 />
               );            })}
             {isTyping && <TypingBubble message={typingMessage} />}

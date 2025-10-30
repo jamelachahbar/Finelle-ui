@@ -636,3 +636,77 @@
     max-height: 85vh !important;
   }
 }
+
+/* Memory and Feedback Styling */
+.memory-badge {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 6px;
+  background-color: #e3f2fd;
+  color: #1976d2;
+  border-radius: 4px;
+  margin-left: 6px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.memory-badge:hover {
+  background-color: #bbdefb;
+}
+
+/* Feedback buttons container */
+.feedback-buttons {
+  display: flex;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+/* Feedback button base styling */
+.feedback-btn {
+  min-width: 28px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: #5f6368;
+  transition: all 0.2s ease;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Thumbs up hover effect */
+.feedback-btn-positive:hover {
+  background-color: #e8f5e9 !important;
+  color: #2e7d32 !important;
+  transform: scale(1.1);
+}
+
+/* Thumbs down hover effect */
+.feedback-btn-negative:hover {
+  background-color: #ffebee !important;
+  color: #c62828 !important;
+  transform: scale(1.1);
+}
+
+/* Feedback confirmation badge */
+.feedback-confirmation {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.feedback-confirmation.positive {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.feedback-confirmation.negative {
+  background-color: #ffebee;
+  color: #c62828;
+}
