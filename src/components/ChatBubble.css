@@ -678,6 +678,30 @@
   justify-content: center;
 }
 
+/* Feedback button hover effect in header */
+.feedback-button:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Specific hover effects for thumbs up and down */
+.feedback-button.thumbs-up:hover {
+  background-color: #e8f5e9 !important;
+  color: #2e7d32 !important;
+}
+
+.feedback-button.thumbs-down:hover {
+  background-color: #ffebee !important;
+  color: #c62828 !important;
+}
+
+/* Audio/Speaker button hover effect - same as feedback buttons */
+.speaker-button:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  background-color: #f5f5f5 !important;
+}
+
 /* Thumbs up hover effect */
 .feedback-btn-positive:hover {
   background-color: #e8f5e9 !important;

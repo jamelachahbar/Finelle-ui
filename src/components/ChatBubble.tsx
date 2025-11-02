@@ -15,7 +15,6 @@ import { Button } from '@fluentui/react-components';
 import { Speaker224Regular, SpeakerMute24Regular, ArrowDownload24Regular, ZoomIn24Regular, Dismiss24Regular } from '@fluentui/react-icons';
 
 interface ChatBubbleProps {
-  id?: string; // Message ID for feedback tracking
   role: 'user' | 'agent' | 'system' | 'assistant';
   agent?: string;
   content: string;
@@ -27,9 +26,9 @@ interface ChatBubbleProps {
   chartData?: string; // Base64 encoded chart image
   chartFormat?: string; // e.g., "png_base64"
   chartType?: string; // e.g., "time_series_anomaly"
-  fromCache?: boolean; // Indicates if response came from memory cache
-  feedbackGiven?: 'positive' | 'negative' | null; // Track user feedback
-  onFeedback?: (messageId: string, isAccurate: boolean) => void; // Callback for feedback
+  onThumbsUp?: () => void;
+  onThumbsDown?: () => void;
+  feedbackGiven?: 'positive' | 'negative' | null;
 }
 
 function tryRenderJsonTable(jsonString: string): JSX.Element | null {
@@ -71,7 +70,6 @@ function tryRenderJsonTable(jsonString: string): JSX.Element | null {
 }
 
 const ChatBubble: React.FC<ChatBubbleProps> = ({ 
-  id,
   role, 
   agent = 'TeamLeader', 
   content, 
@@ -83,9 +81,9 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
   chartData,
   chartFormat,
   chartType,
-  fromCache = false,
-  feedbackGiven = null,
-  onFeedback
+  onThumbsUp,
+  onThumbsDown,
+  feedbackGiven
 }) => {
   const isUser = role === 'user';
   const [enlargedChart, setEnlargedChart] = useState<{src: string, alt: string} | null>(null);
@@ -507,80 +505,68 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
           
           {/* All icons grouped on the right */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {/* Memory cache badge */}
-            {!isUser && fromCache && (
-              <span 
-                className="memory-badge"
-                style={{
-                  fontSize: '11px',
-                  padding: '2px 6px',
-                  backgroundColor: '#e3f2fd',
-                  color: '#1976d2',
-                  borderRadius: '4px',
-                  fontWeight: 500
-                }}
-              >
-                📚 From Memory
+            {/* Feedback status text */}
+            {!isUser && feedbackGiven && (
+              <span style={{
+                fontSize: '11px',
+                padding: '2px 8px',
+                borderRadius: '12px',
+                fontWeight: 500,
+                backgroundColor: feedbackGiven === 'positive' ? '#e8f5e9' : '#ffebee',
+                color: feedbackGiven === 'positive' ? '#2e7d32' : '#c62828',
+              }}>
+                {feedbackGiven === 'positive' ? '✓ Helpful' : '✗ Not helpful'}
               </span>
             )}
-            
-            {/* Feedback buttons */}
-            {!isUser && id && onFeedback && (
-              <div style={{ display: 'flex', gap: '4px' }}>
-                {feedbackGiven === null ? (
-                  <>
-                    <Button
-                      appearance="subtle"
-                      size="small"
-                      onClick={() => onFeedback(id, true)}
-                      aria-label="Thumbs up - This response was helpful"
-                      className="feedback-btn feedback-btn-positive"
-                      style={{
-                        minWidth: '28px',
-                        width: '28px',
-                        height: '28px',
-                        borderRadius: '50%',
-                        color: '#5f6368',
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      👍
-                    </Button>
-                    <Button
-                      appearance="subtle"
-                      size="small"
-                      onClick={() => onFeedback(id, false)}
-                      aria-label="Thumbs down - This response was not helpful"
-                      className="feedback-btn feedback-btn-negative"
-                      style={{
-                        minWidth: '28px',
-                        width: '28px',
-                        height: '28px',
-                        borderRadius: '50%',
-                        color: '#5f6368',
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      👎
-                    </Button>
-                  </>
-                ) : (
-                  <span 
-                    style={{
-                      fontSize: '11px',
-                      padding: '2px 6px',
-                      backgroundColor: feedbackGiven === 'positive' ? '#e8f5e9' : '#ffebee',
-                      color: feedbackGiven === 'positive' ? '#2e7d32' : '#c62828',
-                      borderRadius: '4px',
-                      fontWeight: 500
-                    }}
-                  >
-                    {feedbackGiven === 'positive' ? '✓ Helpful' : '✗ Not Helpful'}
-                  </span>
-                )}
-              </div>
+            {/* Feedback buttons for agent messages */}
+            {!isUser && onThumbsUp && onThumbsDown && !feedbackGiven && (
+              <>
+                <Button
+                  appearance="subtle"
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    console.log('👍 Thumbs up clicked in ChatBubble!');
+                    onThumbsUp();
+                  }}
+                  aria-label="This response was helpful"
+                  title="Mark as helpful - stores in memory"
+                  style={{
+                    minWidth: '28px',
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    color: '#5f6368',
+                    transition: 'all 0.2s ease',
+                  }}
+                  className="feedback-button thumbs-up"
+                >
+                  👍
+                </Button>
+                <Button
+                  appearance="subtle"
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    console.log('👎 Thumbs down clicked in ChatBubble!');
+                    onThumbsDown();
+                  }}
+                  aria-label="This response was not helpful"
+                  title="Mark as not helpful - provide feedback"
+                  style={{
+                    minWidth: '28px',
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    color: '#5f6368',
+                    transition: 'all 0.2s ease',
+                  }}
+                  className="feedback-button thumbs-down"
+                >
+                  👎
+                </Button>
+              </>
             )}
-            
             {/* Speaker button for agent messages */}
             {!isUser && onSpeak && (
               <Button

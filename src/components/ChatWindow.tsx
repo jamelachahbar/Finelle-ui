@@ -6,7 +6,6 @@ import './ChatWindow.css';
 import { Send24Regular, Mic24Regular, MicOff24Regular } from '@fluentui/react-icons';
 import { Citation, formatCitationsForMarkdown } from '../utils/citationUtils';
 import { speechService } from '../services/speechService';
-import { sendMemoryFeedback } from '../api/harisApi';
 import env from '../config/env';
 
 interface VoiceSettings {
@@ -34,6 +33,9 @@ interface ApiResponse {
   chart_data?: string;
   chart_format?: string;
   chart_type?: string;
+  memory_id?: string; // Memory ID from mem0 backend (snake_case)
+  memoryId?: string; // Alternative camelCase format
+  from_cache?: boolean; // Indicates cached response
   [key: string]: unknown;
 }
 
@@ -52,6 +54,7 @@ type ChatMessage = {
   feedbackGiven?: 'positive' | 'negative' | null; // Track user feedback
   userQuestion?: string; // Store original question for feedback API
   timestamp?: Date;
+  memory_id?: string; // Memory ID from mem0 backend
 };
 
 const promptSuggestions = [
@@ -307,41 +310,124 @@ export default function ChatWindow() {
     console.log('✅ Speech stopped and state reset');
   };
 
-  // Handle memory feedback
-  const handleFeedback = async (messageId: string, isAccurate: boolean) => {
+  // ============================================================
+  // FEEDBACK FUNCTIONS - mem0 Integration
+  // ============================================================
+
+  const submitFeedback = async (
+    messageIndex: number,
+    isAccurate: boolean,
+    feedbackReason?: string
+  ) => {
     try {
-      // Find the message to get the user question
-      const message = messages.find(msg => msg.id === messageId);
-      if (!message || !message.userQuestion) {
-        console.error('❌ Message or user question not found for feedback');
+      const message = messages[messageIndex];
+      
+      console.log('🔍 submitFeedback called:', {
+        messageIndex,
+        totalMessages: messages.length,
+        currentMessage: message,
+        currentRole: message?.role,
+        previousMessage: messages[messageIndex - 1],
+        previousRole: messages[messageIndex - 1]?.role
+      });
+      
+      // Find the most recent user message before this agent message
+      let userMessage = null;
+      for (let i = messageIndex - 1; i >= 0; i--) {
+        if (messages[i].role === 'user') {
+          userMessage = messages[i];
+          console.log(`✅ Found user message at index ${i}:`, userMessage.content.substring(0, 50));
+          break;
+        }
+      }
+      
+      if (!userMessage) {
+        console.error('❌ Cannot find user question for feedback', {
+          messageIndex,
+          totalMessages: messages.length,
+          allRoles: messages.map((m, i) => `${i}: ${m.role}`)
+        });
         return;
       }
 
-      console.log('📝 Sending memory feedback:', {
-        messageId,
-        question: message.userQuestion,
+      const isDevelopment = import.meta.env.DEV;
+      const baseUrl = isDevelopment ? '' : env.BACKEND_URL;
+      
+      const params = new URLSearchParams({
+        user_question: userMessage.content,
+        session_id: sessionIdRef.current,
+        is_accurate: String(isAccurate),
+      });
+      
+      if (message.memory_id) {
+        params.append('memory_id', message.memory_id);
+        console.log('📝 Including memory_id in feedback:', message.memory_id);
+      } else {
+        console.log('⚠️ No memory_id available for this message');
+      }
+      
+      if (feedbackReason) {
+        params.append('feedback_reason', feedbackReason);
+      }
+      
+      console.log('📝 Submitting feedback:', {
         isAccurate,
-        sessionId: sessionIdRef.current
+        hasMemoryId: !!message.memory_id,
+        hasFeedbackReason: !!feedbackReason,
+        messageIndex
       });
 
-      // Send feedback to backend
-      await sendMemoryFeedback(
-        message.userQuestion,
-        sessionIdRef.current,
-        isAccurate
-      );
+      const response = await fetch(`${baseUrl}/api/memory/feedback?${params}`, {
+        method: 'POST',
+      });
 
-      // Update message to reflect feedback given
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId 
+      if (!response.ok) {
+        throw new Error(`Feedback failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Feedback recorded:', result);
+      
+      // Update the message state to show feedback was given
+      setMessages(prev => prev.map((msg, idx) => 
+        idx === messageIndex 
           ? { ...msg, feedbackGiven: isAccurate ? 'positive' : 'negative' }
           : msg
       ));
-
-      console.log('✅ Memory feedback sent successfully');
+      
     } catch (error) {
-      console.error('❌ Failed to send memory feedback:', error);
+      console.error('❌ Failed to submit feedback:', error);
     }
+  };
+
+  const handleThumbsUp = (messageIndex: number) => {
+    console.log('👍 handleThumbsUp called in ChatWindow for message', messageIndex);
+    console.log('📊 Total messages:', messages.length);
+    console.log('📝 Message at index:', messages[messageIndex]);
+    submitFeedback(messageIndex, true, 'User marked as accurate');
+  };
+
+  const handleThumbsDown = (messageIndex: number) => {
+    console.log('👎 handleThumbsDown called in ChatWindow for message', messageIndex);
+    console.log('📊 Total messages:', messages.length);
+    console.log('📝 Message at index:', messages[messageIndex]);
+    
+    const reason = prompt(
+      '💭 What was wrong with this response? (Optional)\n\n' +
+      '💡 Tip: Type "wrong" to delete this memory completely.'
+    );
+    
+    // User cancelled
+    if (reason === null) {
+      console.log('User cancelled feedback');
+      return;
+    }
+    
+    submitFeedback(
+      messageIndex, 
+      false, 
+      reason || 'User marked as inaccurate'
+    );
   };
 
   const handleSend = async () => {
@@ -429,6 +515,21 @@ export default function ChatWindow() {
           return;
         }
         
+        // CRITICAL: Check for memory_id in raw data
+        if (typeof event.data === 'string') {
+          const hasMemoryIdInRaw = event.data.includes('memory_id') || 
+                                    event.data.includes('memoryId') || 
+                                    event.data.includes('memory-id');
+          console.log('🔍 Raw memory_id check:', {
+            hasMemoryIdInRaw,
+            memoryIdVariations: {
+              memory_id: event.data.includes('memory_id'),
+              memoryId: event.data.includes('memoryId'),
+              'memory-id': event.data.includes('memory-id')
+            }
+          });
+        }
+        
         // Raw chart debugging - check if chart data exists at all
         console.log('🔍 Raw chart debugging:', {
           rawDataIncludes_chart: event.data.includes('chart'),
@@ -451,7 +552,11 @@ export default function ChatWindow() {
           chartStructure: data.chart ? Object.keys(data.chart) : null,
           chartImageBase64Length: data.chart?.image_base64?.length || 0,
           chartFormat: data.chart_format,
-          chartType: data.chart_type
+          chartType: data.chart_type,
+          // CRITICAL: Memory ID debugging
+          memory_id: data.memory_id,
+          hasMemoryId: !!data.memory_id,
+          from_cache: data.from_cache
         });
 
         if (data.content === '[DONE]') {
@@ -596,6 +701,14 @@ export default function ChatWindow() {
       const isFromCache = data.from_cache === true || 
                           (typeof data.content === 'string' && data.content.includes('📚 *From memory:*'));
       
+      // Extract memory_id - handle both snake_case and camelCase
+      const memoryId = data.memory_id || data.memoryId || (data as Record<string, unknown>)['memory-id'] as string | undefined;
+      
+      if (memoryId) {
+        console.log('✅ Found memory_id in response:', memoryId, 'using field:', 
+          data.memory_id ? 'memory_id' : data.memoryId ? 'memoryId' : 'memory-id');
+      }
+      
       const msg: ChatMessage = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // Generate unique ID
         role: (data.role as 'user' | 'agent' | 'assistant' | 'system') || 'agent',
@@ -612,7 +725,31 @@ export default function ChatWindow() {
         fromCache: isFromCache,
         userQuestion: userQuestion, // Associate with the user's question
         timestamp: new Date(),
+        memory_id: memoryId, // Use extracted memory ID
       };
+
+      // Debug log for memory_id
+      if (memoryId) {
+        console.log('✅ Successfully captured memory_id from backend:', memoryId);
+        console.log('✅ Message object with memory_id:', {
+          role: msg.role,
+          agent: msg.agent,
+          memory_id: msg.memory_id,
+          hasMemoryId: !!msg.memory_id,
+          fromCache: msg.fromCache
+        });
+      } else {
+        console.warn('⚠️ ====== NO MEMORY_ID IN RESPONSE ======');
+        console.warn('⚠️ This means feedback WILL NOT be saved to mem0!');
+        console.warn('⚠️ Backend needs to include memory_id in the response');
+        console.warn('⚠️ Backend response keys:', Object.keys(data));
+        console.warn('⚠️ Checking for memory_id variations:', {
+          'data.memory_id': data.memory_id,
+          'data.memoryId': data.memoryId,
+          'data["memory-id"]': (data as Record<string, unknown>)['memory-id']
+        });
+        console.warn('⚠️ ========================================');
+      }
 
       // Create a final check to ensure citations are included in the message
       // If there are citations in the original data, make sure they're passed along
@@ -859,7 +996,6 @@ export default function ChatWindow() {
               return msg.role === 'agent' || msg.role === 'assistant' ? (
                 <div key={idx}>
                   <ChatBubble 
-                    id={msg.id}
                     role={msg.role} 
                     agent={msg.agent} 
                     content={processedContent} 
@@ -871,19 +1007,27 @@ export default function ChatWindow() {
                     chartData={msg.chartData}
                     chartFormat={msg.chartFormat}
                     chartType={msg.chartType}
-                    fromCache={msg.fromCache}
                     feedbackGiven={msg.feedbackGiven}
-                    onFeedback={handleFeedback}
+                    onThumbsUp={() => {
+                      console.log('🔵 Arrow function for thumbs up called, idx:', idx);
+                      handleThumbsUp(idx);
+                    }}
+                    onThumbsDown={() => {
+                      console.log('🔵 Arrow function for thumbs down called, idx:', idx);
+                      handleThumbsDown(idx);
+                    }}
                   />
+                  
                   {/* Debug info - only show in development */}
                   {process.env.NODE_ENV === 'development' && msg.citations && msg.citations.length > 0 && (
-                    <div style={{ fontSize: '11px', opacity: 0.6, marginTop: '2px', textAlign: 'right' }}>{msg.citations.length} citations</div>
+                    <div style={{ fontSize: '11px', opacity: 0.6, marginTop: '2px', textAlign: 'right' }}>
+                      {msg.citations.length} citations
+                    </div>
                   )}
                 </div>
               ) : (
                 <ChatBubble 
                   key={idx}
-                  id={msg.id}
                   role={msg.role} 
                   agent={msg.agent} 
                   content={processedContent} 
@@ -895,9 +1039,6 @@ export default function ChatWindow() {
                   chartData={msg.chartData}
                   chartFormat={msg.chartFormat}
                   chartType={msg.chartType}
-                  fromCache={msg.fromCache}
-                  feedbackGiven={msg.feedbackGiven}
-                  onFeedback={handleFeedback}
                 />
               );            })}
             {isTyping && <TypingBubble message={typingMessage} />}
