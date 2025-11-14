@@ -271,9 +271,63 @@ gh run list --workflow=azure-dev.yml
 - **`azure.yaml`** - Azure Developer CLI configuration with image upsert strategy
 - **`infra/main.bicep`** - Infrastructure as Code using Azure Verified Modules
 - **`.github/workflows/azure-dev.yml`** - GitHub Actions CI/CD pipeline
+- **`.github/workflows/docker-publish.yml`** - GitHub Container Registry workflow
 - **`Dockerfile`** - Multi-stage container build with nginx
 - **`package.json`** - Dependencies and build scripts
 - **`.env.example`** - Key environment variables file
+
+## 🐳 GitHub Container Registry (GHCR)
+
+The project includes automated Docker image building and publishing to GitHub Container Registry.
+
+### Container Image Publishing
+
+A GitHub Actions workflow automatically builds and publishes container images to GHCR:
+- **Trigger**: Automatic on push to `main`, pull requests, tags, or manual dispatch
+- **Registry**: `ghcr.io/jamelachahbar/finelle-ui`
+- **Authentication**: Uses `GITHUB_TOKEN` (no additional secrets required)
+
+### Image Tags
+
+The workflow automatically creates multiple tags for each build:
+- `latest` - Most recent build from main branch
+- `main` - Current main branch
+- `v1.2.3` - Semantic version tags (when you create a release tag)
+- `main-<sha>` - Specific commit SHA for traceability
+- `pr-123` - Pull request builds (not pushed to registry)
+
+### Using Published Images
+
+Pull and run the latest image:
+```bash
+# Pull the latest image
+docker pull ghcr.io/jamelachahbar/finelle-ui:latest
+
+# Run the container
+docker run -p 80:80 \
+  -e VITE_APPINSIGHTS_CONNECTION_STRING="your-connection-string" \
+  -e VITE_BACKEND_URL="your-backend-url" \
+  ghcr.io/jamelachahbar/finelle-ui:latest
+```
+
+### Building Images Locally
+
+Build the Docker image locally for testing:
+```bash
+# Build the image
+docker build -t finelle-ui:local .
+
+# Run locally
+docker run -p 80:80 finelle-ui:local
+```
+
+### Workflow Features
+
+- **Multi-stage builds**: Optimized for size and performance
+- **Layer caching**: GitHub Actions cache for faster builds
+- **Build attestation**: Cryptographic provenance for security
+- **Security scanning**: Automatic vulnerability detection
+- **Multiple architectures**: Support for amd64 (arm64 can be added)
 
 ## 🏗️ Architecture
 
