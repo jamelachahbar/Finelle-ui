@@ -62,9 +62,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            VITE_APPINSIGHTS_CONNECTION_STRING=${{ secrets.VITE_APPINSIGHTS_CONNECTION_STRING }}
-            VITE_BACKEND_URL=${{ secrets.VITE_BACKEND_URL }}
 
       - name: Generate artifact attestation
         if: github.event_name != 'pull_request'
