@@ -1,5 +1,3 @@
-import env from '../config/env';
-
 export const useAgentChat = (prompt: string): EventSource => {
     // Use relative URLs in both dev and production
     // In production, nginx proxies /api/* to the backend (supports internal ingress)
