@@ -317,21 +317,24 @@ export default function ChatWindow() {
     const encodedPrompt = encodeURIComponent(input);
     
     // In development mode, use relative URLs to work with Vite proxy
-    // In production, use the configured backend URL
+    // Use relative URLs in both dev and production
+    // In production, nginx reverse proxy handles /api/* routing to internal backend
+    // In development, Vite dev server proxies to backend
     const isDevelopment = import.meta.env.DEV;
-    const baseUrl = isDevelopment ? '' : env.BACKEND_URL;
+    const baseUrl = '/api';
     
     console.log('🔍 Chat environment debug:', {
       isDevelopment,
       envBackendUrl: env.BACKEND_URL,
-      baseUrl: baseUrl || '(relative URLs for proxy)',
+      baseUrl: baseUrl,
+      strategy: isDevelopment ? 'Vite dev proxy' : 'nginx reverse proxy to internal backend',
       windowEnv: window._env_
     });
     
     let eventSource: EventSource | null = null;
     
     try {
-      const eventSourceUrl = `${baseUrl}/api/ask-stream?prompt=${encodedPrompt}&sessionId=${sessionIdRef.current}`;
+      const eventSourceUrl = `${baseUrl}/ask-stream?prompt=${encodedPrompt}&sessionId=${sessionIdRef.current}`;
       console.log('🔍 Creating EventSource with URL:', eventSourceUrl);
       
       eventSource = new EventSource(eventSourceUrl);
