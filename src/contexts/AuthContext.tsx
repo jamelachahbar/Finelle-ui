@@ -25,7 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Check session on mount
   useEffect(() => {
-    checkAuth();
+    void checkAuth();
   }, []);
 
   const checkAuth = async () => {
@@ -60,9 +60,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       return { success: false, error: 'Login failed' };
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error && 'response' in err 
-        ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail || 'Login failed'
-        : 'Login failed';
+      let errorMessage = 'Login failed';
+      if (err && typeof err === 'object' && 'response' in err) {
+        const response = (err as { response?: { data?: { detail?: string } } }).response;
+        errorMessage = response?.data?.detail || 'Login failed';
+      }
       setError(errorMessage);
       return { success: false, error: errorMessage };
     }

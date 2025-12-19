@@ -20,13 +20,9 @@ const apiClient = axios.create({
   },
 });
 
-// Request interceptor - add CSRF header to all requests
+// Request interceptor - for future extensions
 apiClient.interceptors.request.use(
   (config) => {
-    // Ensure CSRF header is present for unsafe methods
-    if (['post', 'put', 'delete', 'patch'].includes(config.method?.toLowerCase() || '')) {
-      config.headers['X-Requested-With'] = 'XMLHttpRequest';
-    }
     return config;
   },
   (error) => Promise.reject(error)
