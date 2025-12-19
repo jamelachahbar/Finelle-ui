@@ -31,7 +31,7 @@ const Login: React.FC = () => {
       } else {
         setError(result.error || 'Invalid credentials');
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred');
     } finally {
       setLoading(false);
