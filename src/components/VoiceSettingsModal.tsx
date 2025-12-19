@@ -36,7 +36,7 @@ interface VoiceSettingsModalProps {
 }
 
 const DEFAULT_SETTINGS: VoiceSettings = {
-  voiceEnabled: true,
+  voiceEnabled: false,
   provider: 'browser',
   selectedVoice: '',
   speechRate: 1.0,
