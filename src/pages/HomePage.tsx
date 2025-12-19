@@ -83,7 +83,7 @@ export default function HomePage() {
       } else {
         // Default settings if none saved
         const defaultSettings: VoiceSettings = {
-          voiceEnabled: true,
+          voiceEnabled: false,
           provider: 'browser',
           selectedVoice: '',
           speechRate: 1.0,
