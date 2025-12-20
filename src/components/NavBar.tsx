@@ -1,10 +1,11 @@
 // src/components/NavBar.tsx
 import { makeStyles } from "@fluentui/react-components";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@fluentui/react-components";
-import { Home24Regular, Chat24Regular, DataTrending24Regular, Settings24Regular } from "@fluentui/react-icons";
+import { Home24Regular, Chat24Regular, DataTrending24Regular, Settings24Regular, SignOut24Regular } from "@fluentui/react-icons";
 import HarisLogo from '../assets/Harislogo.png';
 import VoiceSettingsModal from './VoiceSettingsModal';
+import { useAuth } from '../contexts/AuthContext';
 
 const useStyles = makeStyles({
   nav: {
@@ -63,10 +64,26 @@ const useStyles = makeStyles({
       color: "#3c4043",
     },
   },
+  userInfo: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+    fontSize: "0.875rem",
+    color: "#5f6368",
+    paddingRight: "1rem",
+  },
 });
 
 export default function NavBar() {
   const styles = useStyles();
+  const { user, logout, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
   return (
     <header className={styles.nav}>
       <div className={styles.logo}>
@@ -102,6 +119,23 @@ export default function NavBar() {
             </Button>
           }
         />
+
+        {/* User info and logout */}
+        {isAuthenticated && user && (
+          <>
+            <span className={styles.userInfo}>
+              Welcome, {user.username}
+            </span>
+            <Button
+              icon={<SignOut24Regular />}
+              appearance="subtle"
+              onClick={handleLogout}
+              className={styles.navButton}
+            >
+              Logout
+            </Button>
+          </>
+        )}
       </nav>
     </header>
   );
