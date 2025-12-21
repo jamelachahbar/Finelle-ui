@@ -1,392 +1,149 @@
-# README: UI Improvement Documentation
+# Haris AI Agent UX Documentation
 
 ## Overview
 
-This directory contains comprehensive documentation for improving the Haris AI chat interface user experience, with a focus on visual feedback when the AI agent is actively working on different tasks.
+This documentation provides guidance for implementing Microsoft's **UX Design for Agents** principles in the Haris AI interface. The guidance is based directly on [Microsoft Design: UX Design for Agents](https://microsoft.design/articles/ux-design-for-agents/).
 
 ## Documents
 
-### 📘 [UI_IMPROVEMENT_IDEAS.md](./UI_IMPROVEMENT_IDEAS.md)
-**Purpose:** High-level concepts and strategic recommendations  
-**Best for:** Understanding the "why" behind improvements  
-**Content:**
-- Comprehensive analysis of current state vs. recommended improvements
-- Examples from Microsoft Copilot, ChatGPT, and Claude
-- 8 major improvement categories with detailed explanations
-- 4-phase implementation roadmap with effort estimates
-- Backend requirements and API changes needed
-- Design system integration guidelines
-- Testing considerations
+### 📘 [AGENT_UX_PRINCIPLES.md](./AGENT_UX_PRINCIPLES.md)
+**Complete framework and principles**
 
-**Key Sections:**
-1. Agent Working State Indicators
-2. Task Progress Visualization  
-3. Streaming Response Enhancement
-4. Visual Feedback Systems
-5. Interactive Elements
-6. Accessibility Improvements
-7. Performance Optimizations
-8. Implementation Priorities
+Comprehensive explanation of Microsoft's agent UX design framework covering:
+- **People**: Human-centric design, collaboration, personal growth
+- **Space**: Accessible yet invisible, multimodal, connecting not isolating
+- **Time**: Historical context, present relevance, future anticipation
+- **Foundations**: Trust, transparency, control, consistency
+
+Use this document to understand the "why" behind each principle and how it applies to Haris.
+
+**Best for:** Understanding the complete framework and philosophy
 
 ---
 
-### 💻 [VISUAL_ENHANCEMENT_GUIDE.md](./VISUAL_ENHANCEMENT_GUIDE.md)
-**Purpose:** Ready-to-implement code examples  
-**Best for:** Coding agents and developers  
-**Content:**
-- Complete TypeScript/React component implementations
-- Full CSS with animations and transitions
-- Integration examples with existing ChatWindow
-- Backend API requirements with type definitions
-- Design system tokens (colors, spacing, typography)
+### 💻 [IMPLEMENTATION_GUIDE.md](./IMPLEMENTATION_GUIDE.md)
+**Practical implementation with code examples**
 
-**Components Included:**
-1. `EnhancedTypingBubble` - Dynamic status indicator with progress
-2. `ProgressStages` - Multi-step progress visualization
-3. `TaskTree` - Collapsible hierarchical task display
-4. `TextSkeleton`, `ChartSkeleton`, `TableSkeleton` - Loading placeholders
-5. Stop Generation Button - User control implementation
-6. Integration examples for ChatWindow
+Step-by-step guide with production-ready React/TypeScript components:
+- Phase 1: Transparency & basic control (Activity indicator, stop button, confidence)
+- Phase 2: Reasoning & learning (Reasoning panel, learning tips)
+- Phase 3: Temporal context (Historical insights, proactive suggestions)
+- Phase 4: Customization & control (Preferences, data management)
 
-**All code is production-ready and follows:**
-- TypeScript best practices
-- Microsoft Fluent UI design patterns
-- Accessibility standards (WCAG AA)
-- Modern React patterns (hooks, functional components)
+Includes complete component code, CSS, integration instructions, and backend requirements.
+
+**Best for:** Developers implementing the features
 
 ---
 
-### ✅ [IMPLEMENTATION_CHECKLIST.md](./IMPLEMENTATION_CHECKLIST.md)
-**Purpose:** Practical implementation guide  
-**Best for:** Project planning and tracking progress  
-**Content:**
-- 4-phase development plan with specific tasks
-- Checkboxes for tracking completion
-- Files to create/modify for each feature
-- Backend API changes required
-- Testing checklist (manual, accessibility, performance)
-- Quick command reference
-- Integration notes
+## Quick Start
 
-**Phases:**
-- **Phase 1 (1-2 weeks):** Quick wins - Enhanced typing indicator, stop button, animations
-- **Phase 2 (3-4 weeks):** Enhanced feedback - Progress stages, skeletons, avatar states
-- **Phase 3 (5-8 weeks):** Advanced features - Task tree, activity log, keyboard shortcuts
-- **Phase 4 (9-12 weeks):** Polish - Virtual scrolling, sound effects, advanced refinement
+1. **Read AGENT_UX_PRINCIPLES.md** to understand the framework
+2. **Review IMPLEMENTATION_GUIDE.md** for practical steps
+3. **Start with Phase 1** (Weeks 1-2):
+   - Activity status indicator
+   - Stop generation control
+   - Confidence display
 
----
+## Core Principles Summary
 
-## Quick Start for Developers
+Microsoft's agent UX framework is built on three dimensions:
 
-### 1. Understand the Vision
-Read `UI_IMPROVEMENT_IDEAS.md` to understand:
-- Why these improvements matter
-- What problems they solve
-- What the end result should look like
+### 1. People (Human-Centric)
+- **Broaden human capacity**: Help users brainstorm, automate, fill knowledge gaps
+- **Support collaboration**: Connect people and resources, don't isolate
+- **Enable growth**: Support learning and skill development
 
-### 2. Review Examples from Leading AI Interfaces
-**Microsoft Copilot:**
-- Multi-stage status messages
-- Plugin/tool usage indicators
-- Progress tracking
-- Stop/regenerate controls
+### 2. Space (Environment)
+- **Connecting not collapsing**: Facilitate collaboration across teams
+- **Accessible yet invisible**: Available when needed, background otherwise
+- **Multimodal**: Support various input/output methods
 
-**ChatGPT:**
-- Smooth streaming animations
-- Word-by-word text appearance
-- Clean, minimal interface
-- Interactive message controls
+### 3. Time (Temporal Awareness)
+- **Use history**: Leverage past interactions for personalization
+- **Present relevance**: Timely, contextual assistance
+- **Anticipate future**: Adapt to evolving needs
 
-**Claude:**
-- Code execution visualization
-- Activity logs
-- Task breakdown displays
+### Foundations
+- **Trust**: Acknowledge uncertainty, build credibility
+- **Transparency**: Explain behavior, show data sources, enable feedback
+- **Control**: Allow customization, provide opt-outs
+- **Consistency**: Maintain predictable patterns
 
-### 3. Choose Your Starting Point
+## Implementation Priority
 
-**For Quick Impact:**
-Start with Phase 1 items in `IMPLEMENTATION_CHECKLIST.md`:
-- Enhanced typing indicator (4-6 hours)
-- Stop generation button (3-4 hours)
-- Streaming animations (4-6 hours)
+| Feature | Priority | Effort | Impact |
+|---------|----------|--------|--------|
+| Activity transparency | High | 1 week | High |
+| Stop/regenerate controls | High | 3 days | High |
+| Confidence indicators | High | 4 days | High |
+| Reasoning display | Medium | 1 week | High |
+| Learning tips | Medium | 3 days | Medium |
+| Historical context | Medium | 1 week | Medium |
+| Preferences system | Low | 1 week | Medium |
+| Proactive insights | Low | 2 weeks | Medium |
 
-**For Maximum Value:**
-Implement in order:
-1. Enhanced typing bubble with dynamic states
-2. Progress stages display
-3. Skeleton loaders
-4. Task breakdown visualization
+## Key Differences from Generic AI UX
 
-**For Full Implementation:**
-Follow the complete 4-phase plan (12 weeks total)
+Microsoft's agent UX principles specifically emphasize:
 
-### 4. Implement Using Code Examples
+1. **Collaboration over replacement**: Agents should connect people, not isolate them
+2. **Temporal intelligence**: Leveraging past, present, and future context
+3. **Space awareness**: Being accessible yet occasionally invisible
+4. **Educational support**: Enabling user growth and learning
+5. **Honest uncertainty**: Clearly communicating confidence and limitations
 
-Copy/adapt components from `VISUAL_ENHANCEMENT_GUIDE.md`:
-- Each component is self-contained
-- TypeScript types included
-- CSS with animations provided
-- Integration examples shown
+This goes beyond typical chatbot UX to create true collaborative agent experiences.
 
-### 5. Test Thoroughly
+## Success Metrics
 
-Use the testing checklist in `IMPLEMENTATION_CHECKLIST.md`:
-- Manual testing scenarios
-- Accessibility verification
-- Performance benchmarks
+### Trust Indicators
+- User acceptance rate of recommendations
+- Feedback sentiment
+- Return user rate
+- Session depth
 
----
+### Transparency Metrics
+- Reasoning panel usage
+- Verification action frequency
+- Confidence indicator interactions
+- Data source view rate
 
-## Key Design Principles
+### Control Metrics
+- Stop/regenerate usage
+- Preference customization rate
+- Data management actions
+- Feedback submission rate
 
-### 1. **Transparency**
-Users should always know what the agent is doing:
-- Show specific operations ("Querying Azure API...")
-- Display progress indicators when available
-- Reveal subtasks and parallel operations
-
-### 2. **Control**
-Users should be able to:
-- Stop generation at any time
-- Regenerate responses
-- Refine or modify requests
-- Resume paused operations
-
-### 3. **Performance**
-All animations and transitions should:
-- Run at 60fps
-- Feel instant (<200ms response)
-- Not block user interactions
-- Work on mobile devices
-
-### 4. **Accessibility**
-All features must:
-- Work with screen readers
-- Support keyboard navigation
-- Meet WCAG AA contrast ratios
-- Provide text alternatives for visual indicators
-
-### 5. **Progressive Enhancement**
-Build features that:
-- Work without JavaScript (where possible)
-- Degrade gracefully on older browsers
-- Load quickly on slow connections
-- Use loading states appropriately
-
----
-
-## Backend Requirements
-
-### New EventSource Message Types
-
-The frontend improvements require the backend to send these message types:
-
-```typescript
-// Status updates
-{
-  type: 'status',
-  activity: 'thinking' | 'fetching_data' | 'analyzing' | 'generating_chart' | 'formatting',
-  message: string,
-  progress?: number,
-  metadata?: { recordCount?: number, estimatedTime?: number }
-}
-
-// Stage updates
-{
-  type: 'stage_update',
-  stages: Array<{
-    id: string,
-    label: string,
-    status: 'pending' | 'active' | 'complete' | 'error',
-    duration?: number
-  }>
-}
-
-// Task tree updates
-{
-  type: 'task_update',
-  taskTree: {
-    id: string,
-    name: string,
-    status: 'pending' | 'in_progress' | 'completed' | 'failed',
-    children?: Task[],
-    metadata?: object
-  }
-}
-
-// Content type hints
-{
-  type: 'content_hint',
-  contentType: 'text' | 'chart' | 'table'
-}
-```
-
-### New API Endpoint
-
-```
-POST /api/cancel-request
-Body: { sessionId: string, requestId?: string }
-Response: { success: boolean, message: string }
-```
-
----
-
-## File Structure
-
-After implementing all improvements, your project will have:
-
-```
-src/
-├── components/
-│   ├── ChatWindow.tsx              # Updated with new features
-│   ├── EnhancedTypingBubble.tsx    # New: Dynamic status indicator
-│   ├── EnhancedTypingBubble.css
-│   ├── ProgressStages.tsx          # New: Multi-stage progress
-│   ├── ProgressStages.css
-│   ├── TaskTree.tsx                # New: Task breakdown display
-│   ├── TaskTree.css
-│   ├── skeletons/
-│   │   ├── TextSkeleton.tsx        # New: Loading placeholders
-│   │   ├── ChartSkeleton.tsx
-│   │   ├── TableSkeleton.tsx
-│   │   └── Skeleton.css
-│   └── ... (existing components)
-└── ... (existing structure)
-```
-
----
-
-## Dependencies
-
-### Already Installed
-- `@fluentui/react-components` - UI component library
-- `@fluentui/react-icons` - Icon library
-- `react` - React framework
-- `typescript` - Type safety
-
-### May Need to Install
-- `react-window` - For virtual scrolling (Phase 4)
-
----
-
-## Example Usage Scenarios
-
-### Scenario 1: Simple Query
-```
-User: "What are my top 5 costs?"
-
-Visual feedback:
-1. User message appears immediately
-2. Enhanced typing bubble shows: 🔍 "Understanding your question..."
-3. Progress stages appear: [✓ Parse] [→ Fetch] [ Analyze] [ Format]
-4. Status updates to: 📊 "Querying Azure Cost Management API..."
-5. Progress bar shows: 60% complete
-6. Chart skeleton appears
-7. Final response streams in with chart
-```
-
-### Scenario 2: Complex Analysis
-```
-User: "Analyze cost anomalies for the last 30 days"
-
-Visual feedback:
-1. User message + immediate acknowledgment
-2. Task tree expands showing:
-   - Parse query parameters ✓
-   - Fetch cost data [→]
-     - Get subscription data ✓
-     - Download 45,234 records [→] 67%
-   - Run anomaly detection [ ]
-   - Generate visualization [ ]
-3. Activity log shows real-time updates
-4. Each completed task shows duration
-5. Final response with insights + charts
-```
-
-### Scenario 3: Long Operation with Stop
-```
-User: "Generate comprehensive cost forecast..."
-
-Visual feedback:
-1. Multi-stage progress indicator starts
-2. Stop button appears in bottom-right
-3. User clicks stop mid-generation
-4. EventSource closes gracefully
-5. System message: "⏹️ Generation stopped by user"
-6. Partial results remain visible
-```
-
----
-
-## Performance Targets
-
-| Metric | Target | Rationale |
-|--------|--------|-----------|
-| Animation FPS | 60fps | Smooth, professional feel |
-| Initial render | <200ms | Feels instant |
-| Typing indicator delay | <100ms | Immediate feedback |
-| Scroll performance | 60fps | Smooth with 100+ messages |
-| Memory usage | <50MB delta | Efficient for long conversations |
-
----
-
-## Accessibility Targets
-
-| Standard | Target | Implementation |
-|----------|--------|----------------|
-| WCAG Level | AA | Minimum requirement |
-| Contrast ratio | 4.5:1 | Text, 3:1 for UI components |
-| Keyboard nav | 100% | All features accessible |
-| Screen reader | Full support | ARIA labels, live regions |
-| Focus indicators | Visible | Clear outlines on all elements |
-
----
+### Learning Metrics
+- Educational resource clicks
+- Concept explanation views
+- User expertise progression
+- Reduced clarification questions over time
 
 ## Resources
 
-### Design Inspiration
-- [Microsoft Fluent Design](https://www.microsoft.com/design/fluent/)
-- [Fluent UI React](https://react.fluentui.dev/)
-- [ChatGPT Interface](https://chat.openai.com/)
-- [Microsoft Copilot](https://copilot.microsoft.com/)
+- [Microsoft Design: UX Design for Agents](https://microsoft.design/articles/ux-design-for-agents/)
+- [Microsoft Learn: Creating a Dynamic UX for Generative AI](https://learn.microsoft.com/en-us/microsoft-cloud/dev/copilot/isv/ux-guidance)
+- [Microsoft Responsible AI Principles](https://www.microsoft.com/en-us/ai/responsible-ai)
+- [Fluent UI React Components](https://react.fluentui.dev/)
 
-### Technical References
-- [React Documentation](https://react.dev/)
-- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
-- [ARIA Authoring Practices](https://www.w3.org/WAI/ARIA/apg/)
-- [Web Animations API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Animations_API)
+## Getting Started
 
-### Testing Tools
-- [Lighthouse](https://developers.google.com/web/tools/lighthouse) - Performance audits
-- [axe DevTools](https://www.deque.com/axe/devtools/) - Accessibility testing
-- [React DevTools](https://react.dev/learn/react-developer-tools) - Component inspection
+**For Product Managers:**
+Read AGENT_UX_PRINCIPLES.md to understand the strategic direction
 
----
+**For Designers:**
+Use both documents to create mockups aligned with Microsoft's principles
 
-## Support and Questions
+**For Developers:**
+Start with IMPLEMENTATION_GUIDE.md Phase 1 components
 
-For questions or clarifications about this documentation:
-
-1. **For High-Level Concepts:** Review `UI_IMPROVEMENT_IDEAS.md`
-2. **For Implementation Details:** Check `VISUAL_ENHANCEMENT_GUIDE.md`
-3. **For Planning:** Use `IMPLEMENTATION_CHECKLIST.md`
-4. **For Specific Issues:** Review code review comments in PR
+**For QA:**
+Use the testing checklists in IMPLEMENTATION_GUIDE.md
 
 ---
 
-## Version History
-
-- **v1.0** (2024-12-21): Initial documentation release
-  - Complete UI improvement strategy
-  - Ready-to-implement code examples
-  - 4-phase implementation plan
-
----
-
-## License
-
-This documentation follows the same license as the Finelle-ui project (MIT License).
-
----
-
-**Ready to get started?** Begin with the Quick Start section above, or dive into `UI_IMPROVEMENT_IDEAS.md` for the full context.
+**Version:** 1.0  
+**Last Updated:** 2024-12-21  
+**Based on:** [Microsoft Design: UX Design for Agents](https://microsoft.design/articles/ux-design-for-agents/)
