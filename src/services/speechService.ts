@@ -193,6 +193,10 @@ class SpeechService {
     const response = await fetch(`${this.baseURL}/api/speech/transcribe?model_size=${modelSize}`, {
       method: 'POST',
       body: formData,
+      credentials: 'include',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+      },
     });
 
     if (!response.ok) {
@@ -299,6 +303,10 @@ class SpeechService {
       const response = await fetch(url, {
         method: 'POST',
         signal: this.currentAbortController.signal,
+        credentials: 'include', // Send session cookies
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest', // CSRF protection
+        },
       });
 
       console.log(`📡 Synthesis response:`, {
@@ -423,7 +431,12 @@ class SpeechService {
       return this.availableVoices;
     }
 
-    const response = await fetch(`${this.baseURL}/api/speech/voices`);
+    const response = await fetch(`${this.baseURL}/api/speech/voices`, {
+      credentials: 'include',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    });
     if (!response.ok) {
       throw new Error(`Failed to fetch voices: ${response.statusText}`);
     }
@@ -483,6 +496,10 @@ class SpeechService {
     const response = await fetch(`${this.baseURL}/api/speech/quick-chat?${params.toString()}`, {
       method: 'POST',
       body: formData,
+      credentials: 'include',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+      },
     });
 
     if (!response.ok) {

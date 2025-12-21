@@ -74,15 +74,25 @@ export const conversationAPI = {
     const params = new URLSearchParams({ prompt });
     if (sessionId) params.append('sessionId', sessionId);
     
-    const response = await fetch(`${API_URL}/api/ask-stream?${params}`, {
+    const url = `${API_URL}/api/ask-stream?${params}`;
+    console.log('🔍 askStream URL:', url);
+    
+    const response = await fetch(url, {
+      method: 'GET',
       credentials: 'include', // Include cookies
       headers: {
         'X-Requested-With': 'XMLHttpRequest', // CSRF protection
+        'Accept': 'text/event-stream',
       },
     });
     
+    console.log('🔍 askStream response status:', response.status);
+    console.log('🔍 askStream response headers:', Object.fromEntries(response.headers.entries()));
+    
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorText = await response.text();
+      console.error('❌ askStream error:', response.status, errorText);
+      throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
     }
     
     return response.body; // Return ReadableStream for SSE
