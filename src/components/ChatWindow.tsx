@@ -6,7 +6,7 @@ import './ChatWindow.css';
 import { Send24Regular, Mic24Regular, MicOff24Regular } from '@fluentui/react-icons';
 import { Citation, formatCitationsForMarkdown } from '../utils/citationUtils';
 import { speechService } from '../services/speechService';
-import env from '../config/env';
+import { conversationAPI } from '../services/api';
 
 interface VoiceSettings {
   voiceEnabled: boolean;
@@ -314,77 +314,94 @@ export default function ChatWindow() {
     }, 100);
 
     setIsTyping(true);
-    const encodedPrompt = encodeURIComponent(input);
-    
-    // In development mode, use relative URLs to work with Vite proxy
-    // In production, use the configured backend URL
-    const isDevelopment = import.meta.env.DEV;
-    const baseUrl = isDevelopment ? '' : env.BACKEND_URL;
-    
-    console.log('🔍 Chat environment debug:', {
-      isDevelopment,
-      envBackendUrl: env.BACKEND_URL,
-      baseUrl: baseUrl || '(relative URLs for proxy)',
-      windowEnv: window._env_
-    });
-    
-    let eventSource: EventSource | null = null;
     
     try {
-      const eventSourceUrl = `${baseUrl}/api/ask-stream?prompt=${encodedPrompt}&sessionId=${sessionIdRef.current}`;
-      console.log('🔍 Creating EventSource with URL:', eventSourceUrl);
+      console.log('🔍 Starting SSE stream with conversationAPI...');
+      const stream = await conversationAPI.askStream(input, sessionIdRef.current);
       
-      eventSource = new EventSource(eventSourceUrl);
-      
-      // Add error handling for EventSource
-      eventSource.onerror = (error) => {
-        console.error('❌ EventSource error:', error);
-        console.error('❌ EventSource readyState:', eventSource?.readyState);
-        console.error('❌ EventSource URL was:', eventSourceUrl);
-        
-        // EventSource readyState values: 0 = CONNECTING, 1 = OPEN, 2 = CLOSED
-        const stateNames = ['CONNECTING', 'OPEN', 'CLOSED'];
-        console.error('❌ EventSource state:', stateNames[eventSource?.readyState || 0]);
-        
+      if (!stream) {
+        console.error('❌ No stream returned from API');
         setIsTyping(false);
+        return;
+      }
+
+      const reader = stream.getReader();
+      const decoder = new TextDecoder();
+
+      // Process the stream
+      const processStream = async () => {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            
+            if (done) {
+              console.log('✅ Stream complete');
+              setIsTyping(false);
+              setTypingMessage('');
+              break;
+            }
+
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const data = line.slice(6).trim();
+                if (data === '[DONE]') {
+                  console.log('✅ Received [DONE] signal');
+                  setIsTyping(false);
+                  setTypingMessage('');
+                  continue;
+                }
+
+                // Process the SSE event data
+                handleStreamEvent(data);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('❌ Stream processing error:', error);
+          setIsTyping(false);
+        }
       };
+
+      void processStream();
       
-      eventSource.onopen = () => {
-        console.log('✅ EventSource connection opened successfully');
-      };
+      // Clear input and refocus after starting the stream
+      setInput('');
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 50);
       
     } catch (error) {
-      console.error('❌ Failed to create EventSource:', error);
+      console.error('❌ Failed to start stream:', error);
       setIsTyping(false);
       return;
     }
+  };
 
-    eventSource.onmessage = (event) => {
-      console.log('🔍 Raw event data received:', event.data); // Debug the raw data first
-      console.log('📊 Event data type:', typeof event.data);
+  const handleStreamEvent = (eventData: string) => {
+    console.log('🔍 Raw event data received:', eventData);
+    console.log('📊 Event data type:', typeof eventData);
       
-      // Also log the first 200 characters to see structure
-      const preview = typeof event.data === 'string' ? event.data.substring(0, 200) : JSON.stringify(event.data).substring(0, 200);
-      console.log('📝 Event data preview:', preview + '...');
-      
-      let data: ApiResponse;
-      try {
-        // Handle both string and object responses
-        if (typeof event.data === 'string') {
-          data = JSON.parse(event.data);
-        } else if (typeof event.data === 'object' && event.data !== null) {
-          data = event.data; // Already an object
-        } else {
-          console.error('Unexpected event data type:', typeof event.data, event.data);
-          return;
-        }
+    let data: ApiResponse;
+    try {
+      // Handle both string and object responses
+      if (typeof eventData === 'string') {
+        data = JSON.parse(eventData);
+      } else if (typeof eventData === 'object' && eventData !== null) {
+        data = eventData as unknown as ApiResponse;
+      } else {
+        console.error('Unexpected event data type:', typeof eventData, eventData);
+        return;
+      }
         
         // Raw chart debugging - check if chart data exists at all
         console.log('🔍 Raw chart debugging:', {
-          rawDataIncludes_chart: event.data.includes('chart'),
-          rawDataIncludes_image_base64: event.data.includes('image_base64'),
-          rawDataIncludes_chart_included: event.data.includes('chart_included'),
-          rawDataLength: event.data.length
+          rawDataIncludes_chart: JSON.stringify(eventData).includes('chart'),
+          rawDataIncludes_image_base64: JSON.stringify(eventData).includes('image_base64'),
+          rawDataIncludes_chart_included: JSON.stringify(eventData).includes('chart_included'),
+          rawDataLength: JSON.stringify(eventData).length
         });
         
         console.log('API Response Data:', {
@@ -407,15 +424,6 @@ export default function ChatWindow() {
         if (data.content === '[DONE]') {
           setIsTyping(false);
           setTypingMessage('');
-          
-          // Safely close the connection
-          try {
-            if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
-              eventSource.close();
-            }
-          } catch (closeError) {
-            console.warn('EventSource already closed on DONE:', closeError);
-          }
           return;
         }
 
@@ -592,95 +600,24 @@ export default function ChatWindow() {
             speakText(msg.content);
           }, 500);
         }
-      }    } catch (error) {
+      }
+    } catch (error) {
       console.error('❌ Data processing error:', error);
-      console.error('❌ Raw event data that failed to process:', event.data);
-      console.error('❌ Event data type:', typeof event.data);
+      console.error('❌ Raw event data that failed to process:', eventData);
+      console.error('❌ Event data type:', typeof eventData);
       
       // Try to handle malformed responses gracefully
-      let fallbackContent = '';
-      
-      if (typeof event.data === 'string') {
-        // If it's a string that looks like JSON but failed to parse, try to extract content
-        if (event.data.includes('"content"')) {
-          try {
-            // Try to extract content with regex as last resort
-            const contentMatch = event.data.match(/"content":\s*"([^"]+)"/);
-            if (contentMatch) {
-              fallbackContent = contentMatch[1];
-            } else {
-              fallbackContent = event.data;
-            }
-          } catch {
-            fallbackContent = event.data;
-          }
-        } else {
-          fallbackContent = event.data;
-        }
-      } else if (typeof event.data === 'object' && event.data !== null) {
-        // If it's an object but somehow failed processing, try to extract content
-        fallbackContent = (event.data as Record<string, unknown>).content as string || JSON.stringify(event.data);
-      } else {
-        fallbackContent = String(event.data);
-      }
-      
-      // Display the fallback content if we have any
-      if (fallbackContent.trim()) {
-        const agentMessage = {
-          role: 'agent' as const,
-          agent: 'Haris',
-          content: fallbackContent,
-        };
-        setMessages((prev) => [...prev, agentMessage]);
-        
-        // Auto-speak agent response if enabled
-        if (voiceSettings.voiceEnabled && voiceSettings.autoSpeak && agentMessage.content) {
-          setTimeout(() => {
-            console.log('🔊 Auto-speaking fallback agent response (will stop current speech if any)');
-            speakText(agentMessage.content);
-          }, 500);
-        }
-        
-        // Auto-scroll after adding fallback message
-        setTimeout(() => {
-          scrollToBottom();
-        }, 100);
-      }
-    }
-    };
-
-    eventSource.onerror = (err) => {
-      console.error('❌ Stream error:', err);
-      setIsTyping(false);
-      
-      // Check if EventSource is still open before adding error message
-      if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
+      if (typeof eventData === 'string' && eventData.trim()) {
         setMessages((prev) => [
           ...prev,
           {
             role: 'agent',
             agent: 'Haris',
-            content: '⚠️ Something went wrong. Please try again or check the server.',
+            content: '⚠️ Received a response, but couldn\'t process it properly. Please try again.',
           },
         ]);
       }
-      
-      // Safely close the connection
-      try {
-        if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
-          eventSource.close();
-        }
-      } catch (closeError) {
-        console.warn('EventSource already closed:', closeError);
-      }
-    };
-
-    setInput('');
-
-    // Focus back on the input field after sending
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 50);
+    }
   };  // Remove scroll detection since we don't have internal scrolling
   // useEffect(() => {
   //   const container = containerRef.current;
