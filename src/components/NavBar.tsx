@@ -107,18 +107,6 @@ export default function NavBar() {
           </Button>
         </Link>
         
-        {/* Voice Settings Modal */}
-        <VoiceSettingsModal 
-          trigger={
-            <Button 
-              icon={<Settings24Regular />} 
-              appearance="outline" 
-              className={styles.settingsButton}
-            >
-              Voice Settings
-            </Button>
-          }
-        />
 
         {/* User info and logout */}
         {isAuthenticated && user && (
@@ -136,6 +124,19 @@ export default function NavBar() {
             </Button>
           </>
         )}
+        {/* Voice Settings Modal */}
+        <VoiceSettingsModal 
+          trigger={
+            <Button 
+              icon={<Settings24Regular />} 
+              appearance="outline" 
+              className={styles.settingsButton}
+            >
+              Voice Settings
+            </Button>
+          }
+        />
+
       </nav>
     </header>
   );
