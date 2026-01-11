@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import env from '../config/env';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import 'highlight.js/styles/github.css';
@@ -249,7 +250,22 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
     ];
     
     // Comprehensive URL detection for backend chart tools
+    // Get backend URL for relative path conversion
+    const backendUrl = env.BACKEND_URL || '';
+    
+    // First, detect relative URLs from backend (e.g., /static/charts/...)
+    const relativeChartUrls = (content.match(/\/static\/charts\/[^\s<>"'()]+\.(png|jpg|jpeg|gif|svg|webp)/gi) || [])
+      .map(url => backendUrl ? `${backendUrl}${url}` : url);
+    
+    console.log('🔗 Relative chart URLs detected:', {
+      count: relativeChartUrls.length,
+      backendUrl,
+      urls: relativeChartUrls
+    });
+    
     const allImageUrls = [
+      // Backend relative URLs (converted to absolute)
+      ...relativeChartUrls,
       // Standard image formats
       ...(content.match(/https?:\/\/[^\s<>"'()]+\.(png|jpg|jpeg|gif|svg|webp)/gi) || []),
       // CDN URLs (common for chart hosting)
@@ -533,22 +549,37 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
                 </a>
               ),              // eslint-disable-next-line @typescript-eslint/no-unused-vars
               img: ({ node, ...props }) => {
+                // Handle relative URLs from backend by prepending backend URL
+                let imageSrc = props.src || '';
+                const isRelativeBackendUrl = imageSrc.startsWith('/static/');
+                if (isRelativeBackendUrl) {
+                  const backendUrl = env.BACKEND_URL || '';
+                  imageSrc = backendUrl ? `${backendUrl}${imageSrc}` : imageSrc;
+                  console.log('🔗 Converting relative backend URL:', {
+                    original: props.src,
+                    backendUrl,
+                    converted: imageSrc
+                  });
+                }
+
                 // Debug all images being processed
                 console.log('🖼️ ReactMarkdown processing image:', {
-                  src: props.src?.substring(0, 80) + '...',
+                  src: imageSrc?.substring(0, 80) + '...',
                   alt: props.alt,
-                  isBase64: props.src?.startsWith('data:image/'),
-                  srcLength: props.src?.length,
-                  actualSrcStart: props.src?.substring(0, 30)
+                  isBase64: imageSrc?.startsWith('data:image/'),
+                  isRelativeBackendUrl,
+                  srcLength: imageSrc?.length,
+                  actualSrcStart: imageSrc?.substring(0, 30)
                 });
 
                 // Check if this is a custom tool icon
-                const isResourceGraphIcon = props.src === '/Resource-Graph-Explorer.svg' && props.alt === 'Resource Graph Explorer';
-                const isAdxIcon = props.src === '/adx.png' && props.alt === 'Azure Data Explorer';
-                const isBase64Chart = props.src?.startsWith('data:image/') && props.src?.includes('base64,');
+                const isResourceGraphIcon = imageSrc === '/Resource-Graph-Explorer.svg' && props.alt === 'Resource Graph Explorer';
+                const isAdxIcon = imageSrc === '/adx.png' && props.alt === 'Azure Data Explorer';
+                const isBase64Chart = imageSrc?.startsWith('data:image/') && imageSrc?.includes('base64,');
+                const isBackendChart = isRelativeBackendUrl || imageSrc?.includes('/static/charts/');
                 
                 // Check if remarkGfm transformed a base64 image to a CDN URL (fallback detection)
-                const isCdnTransformedChart = props.src?.includes('mdn.alipayobjects.com') && 
+                const isCdnTransformedChart = imageSrc?.includes('mdn.alipayobjects.com') && 
                                            (props.alt?.toLowerCase().includes('chart') || 
                                             props.alt?.toLowerCase().includes('anomaly') ||
                                             props.alt?.toLowerCase().includes('plot'));
@@ -624,7 +655,7 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
                 if (isCdnTransformedChart) {
                   console.log('🔄 CDN-transformed chart detected - using placeholder since base64 will render below:', {
                     alt: props.alt,
-                    cdnSrc: props.src,
+                    cdnSrc: imageSrc,
                     availableBase64Images: base64Images.length,
                     availableAlts: base64Images.map(img => img.alt)
                   });
@@ -648,8 +679,41 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
                   );
                 }
 
-                // Default styling for other images
-                return <img {...props} style={{ maxWidth: '100%', borderRadius: 6, marginTop: 8 }} alt="chart" />;
+                // Handle backend chart URLs (from /static/charts/)
+                if (isBackendChart) {
+                  console.log('📊 Rendering backend chart from URL:', {
+                    alt: props.alt,
+                    src: imageSrc
+                  });
+                  return (
+                    <div className="backend-chart-container" style={{ 
+                      margin: '16px 0', 
+                      textAlign: 'center',
+                      isolation: 'isolate'
+                    }}>
+                      <img 
+                        src={imageSrc}
+                        alt={props.alt || 'Anomaly Detection Chart'}
+                        style={{ 
+                          maxWidth: '100%', 
+                          height: 'auto', 
+                          borderRadius: '6px', 
+                          border: '1px solid #e0e0e0',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                          display: 'block',
+                          margin: '0 auto'
+                        }} 
+                        loading="lazy"
+                        decoding="async"
+                        onLoad={() => console.log('✅ Backend chart loaded from URL:', imageSrc)}
+                        onError={(e) => console.error('❌ Backend chart failed to load:', imageSrc, e)}
+                      />
+                    </div>
+                  );
+                }
+
+                // Default styling for other images (use imageSrc which may have been converted from relative URL)
+                return <img {...props} src={imageSrc} style={{ maxWidth: '100%', borderRadius: 6, marginTop: 8 }} alt={props.alt || 'image'} />;
               },
               code: (props) => {
                 const { inline, className, children } = props as any;
