@@ -41,7 +41,7 @@ loadRuntimeConfig();
 
 /**
  * Get environment variable value
- * Priority: Runtime config (window._env_) > Build-time config (import.meta.env)
+ * Priority: Runtime config (window._env_) > Build-time config (import.meta.env) > Inferred from location
  */
 export function getEnv(key: keyof RuntimeEnv): string {
   // First, try runtime config (set by env-config.sh at container startup)
@@ -50,7 +50,31 @@ export function getEnv(key: keyof RuntimeEnv): string {
   }
   
   // Fall back to build-time config (for local development)
-  return import.meta.env[key] as string || '';
+  const buildTimeValue = import.meta.env[key] as string;
+  if (buildTimeValue) {
+    return buildTimeValue;
+  }
+
+  // Final fallback for BACKEND_URL: try to infer from current location
+  // This handles cases where frontend and backend are on the same origin (proxied)
+  if (key === 'VITE_BACKEND_URL') {
+    // Check if we're in a container environment (production) with no env set
+    // In this case, assume backend is on same origin or use common defaults
+    const origin = window.location.origin;
+    
+    // If running on localhost dev server (Vite default ports), assume backend is on 8000
+    if (origin.includes('localhost:5173') || origin.includes('localhost:5174')) {
+      console.warn('⚠️ VITE_BACKEND_URL not set, defaulting to http://localhost:8000');
+      return 'http://localhost:8000';
+    }
+    
+    // In production, if backend is proxied through same origin, use empty string
+    // This makes URLs like /static/charts/... work as relative URLs
+    console.warn('⚠️ VITE_BACKEND_URL not set, using same-origin (empty string)');
+    return '';
+  }
+
+  return '';
 }
 
 export default {

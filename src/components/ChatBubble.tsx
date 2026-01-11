@@ -555,11 +555,6 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
                 if (isRelativeBackendUrl) {
                   const backendUrl = env.BACKEND_URL || '';
                   imageSrc = backendUrl ? `${backendUrl}${imageSrc}` : imageSrc;
-                  console.log('🔗 Converting relative backend URL:', {
-                    original: props.src,
-                    backendUrl,
-                    converted: imageSrc
-                  });
                 }
 
                 // Debug all images being processed
